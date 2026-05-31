@@ -5,12 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EIDOS STUDIO</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBkbsNG7y2_Hkoi8TfR5BgO9lY9giNSEuM",
+    authDomain: "eidos-studio-26f16.firebaseapp.com",
+    projectId: "eidos-studio-26f16",
+    storageBucket: "eidos-studio-26f16.firebasestorage.app",
+    messagingSenderId: "759184530699",
+    appId: "1:759184530699:web:b38646af9eab9e0a7e160e"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  // 관리자 이메일 (본인 이메일로 변경하세요)
+  const ADMIN_EMAIL = "eidosstudio01@gmail.com";
+
+  // 전역 노출
+  window._firebase = { auth, db, storage, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query, ref, uploadBytes, getDownloadURL, ADMIN_EMAIL };
+
+  // 로그인 상태 감지
+  onAuthStateChanged(auth, (user) => {
+    window._currentUser = user;
+    const isAdmin = user && user.email === ADMIN_EMAIL;
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+    document.querySelectorAll('.admin-only-flex').forEach(el => el.style.display = isAdmin ? 'flex' : 'none');
+    const loginBtn = document.getElementById('headerLoginBtn');
+    if (loginBtn) loginBtn.textContent = user ? '로그아웃' : '로그인';
+    if (user) loadAllData();
+  });
+</script>
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#fff;color:#111;font-family:'DM Sans',sans-serif;font-size:12px;letter-spacing:.02em;}
 a{text-decoration:none;color:inherit;cursor:pointer;}
 img{display:block;width:100%;}
 button{font-family:'DM Sans',sans-serif;cursor:pointer;}
+input,textarea,select{font-family:'DM Sans',sans-serif;}
 
 /* ── 헤더 ── */
 header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid #e8e8e4;height:60px;display:flex;align-items:center;padding:0 32px;}
@@ -24,34 +65,34 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .header-icons svg{width:18px;height:18px;stroke:#111;fill:none;stroke-width:1.5;}
 .cart-badge{position:absolute;top:-7px;right:-9px;background:#111;color:#fff;width:15px;height:15px;border-radius:50%;font-size:8px;display:flex;align-items:center;justify-content:center;}
 
-/* ── 햄버거 사이드 메뉴 ── */
-.side-menu-bg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:400;opacity:0;pointer-events:none;transition:opacity .3s;}
-.side-menu-bg.on{opacity:1;pointer-events:all;}
-.side-menu{position:fixed;top:0;right:0;width:320px;height:100vh;background:#fff;z-index:500;transform:translateX(100%);transition:transform .35s ease;overflow-y:auto;padding:28px 32px 40px;}
-.side-menu.on{transform:translateX(0);}
-.side-close{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#888;background:none;border:none;position:absolute;top:24px;right:28px;cursor:pointer;}
-.side-section{margin-top:40px;}
-.side-section h4{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#aaa;margin-bottom:14px;}
+/* ── 사이드 메뉴 ── */
+.side-bg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:400;opacity:0;pointer-events:none;transition:opacity .3s;}
+.side-bg.on{opacity:1;pointer-events:all;}
+.side-menu{position:fixed;top:0;right:0;width:300px;height:100vh;background:#fff;z-index:500;transform:translateX(100%);transition:transform .35s;overflow-y:auto;padding:28px 32px 40px;}
+.side-menu.on{transform:none;}
+.side-close{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#888;background:none;border:none;position:absolute;top:24px;right:28px;}
+.side-sec{margin-top:36px;}
+.side-sec h4{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#aaa;margin-bottom:12px;}
 .side-links{list-style:none;}
 .side-links li{margin-bottom:10px;}
 .side-links li a{font-size:14px;color:#111;letter-spacing:.04em;transition:color .2s;}
 .side-links li a:hover{color:#888;}
 .side-links li a.bold{font-weight:500;}
-.side-divider{border:none;border-top:1px solid #e8e8e4;margin:24px 0;}
+.side-hr{border:none;border-top:1px solid #e8e8e4;margin:20px 0;}
 .side-util{list-style:none;}
 .side-util li{margin-bottom:10px;}
-.side-util li a{font-size:12px;color:#888;letter-spacing:.04em;}
+.side-util li a{font-size:12px;color:#888;}
 
-/* ── 검색 오버레이 ── */
+/* ── 검색 ── */
 .search-overlay{position:fixed;inset:0;background:#fff;z-index:400;display:none;flex-direction:column;align-items:center;padding-top:120px;}
 .search-overlay.on{display:flex;}
-.search-close{position:absolute;top:24px;right:32px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#888;background:none;border:none;cursor:pointer;}
+.search-close{position:absolute;top:24px;right:32px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#888;background:none;border:none;}
 .search-box{width:600px;max-width:90vw;}
-.search-box input{width:100%;border:none;border-bottom:2px solid #111;font-family:'DM Sans',sans-serif;font-size:24px;font-weight:300;padding:12px 0;outline:none;color:#111;}
+.search-box input{width:100%;border:none;border-bottom:2px solid #111;font-size:24px;font-weight:300;padding:12px 0;outline:none;}
 .search-box input::placeholder{color:#ccc;}
 .search-hint{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#aaa;margin-top:16px;}
 
-/* ── 히어로 슬라이더 ── */
+/* ── 히어로 ── */
 .hero-slider{position:relative;width:100%;height:calc(100vh - 60px);overflow:hidden;background:#d8d6d0;}
 .hero-slides{display:flex;height:100%;transition:transform .7s ease;}
 .hero-slide{min-width:100%;height:100%;position:relative;overflow:hidden;}
@@ -59,7 +100,7 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .slide-text{position:absolute;bottom:48px;left:48px;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.25);}
 .slide-text .s-brand{font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:8px;}
 .slide-text h2{font-size:clamp(36px,5vw,68px);font-weight:400;line-height:1.05;}
-.slide-text p{font-size:12px;margin-top:8px;letter-spacing:.05em;opacity:.9;}
+.slide-text p{font-size:12px;margin-top:8px;opacity:.9;}
 .hero-arr{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;border:none;z-index:5;}
 .hero-arr svg{width:14px;height:14px;stroke:#111;fill:none;stroke-width:2;}
 .h-prev{left:20px;}.h-next{right:20px;}
@@ -70,7 +111,7 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .sec-label{font-size:11px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;margin-bottom:24px;padding:0 32px;}
 
 /* ── PROMOTION ── */
-.promo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;}
+.promo-grid{display:grid;grid-template-columns:repeat(4,1fr);}
 .promo-item{position:relative;overflow:hidden;cursor:pointer;}
 .promo-item img{width:100%;aspect-ratio:3/4;object-fit:cover;transition:transform .4s;}
 .promo-item:hover img{transform:scale(1.03);}
@@ -87,7 +128,7 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .ppn{font-size:11px;color:#111;line-height:1.3;}
 .ppp{font-size:11px;color:#111;}
 
-/* ── CURRENT VIEW (포트폴리오 블로그) ── */
+/* ── CURRENT VIEW ── */
 .cv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e8e8e4;border:1px solid #e8e8e4;margin:0 32px;}
 .cv-item{background:#fff;cursor:pointer;transition:background .2s;}
 .cv-item:hover{background:#fafaf8;}
@@ -98,9 +139,9 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .cv-tag{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#888;margin-bottom:8px;}
 .cv-title{font-size:14px;font-weight:400;line-height:1.4;color:#111;margin-bottom:8px;}
 .cv-desc{font-size:11px;color:#888;line-height:1.7;}
-.cv-date{font-size:10px;color:#bbb;margin-top:10px;letter-spacing:.08em;}
+.cv-date{font-size:10px;color:#bbb;margin-top:10px;}
 
-/* ── CURATED ── */
+/* ── 상품 그리드 ── */
 .prod-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px 20px;padding:0 32px;}
 .pcard{cursor:pointer;}
 .pcard-img{aspect-ratio:1/1;background:#f5f5f3;position:relative;overflow:hidden;margin-bottom:12px;}
@@ -136,7 +177,7 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .filter-row{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;border-bottom:1px solid #e8e8e4;}
 .prod-count-lbl{font-size:11px;color:#888;}
 .filter-btns{display:flex;}
-.filter-btns button{background:none;border:none;border-left:1px solid #e8e8e4;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#555;padding:0 18px;height:32px;display:flex;align-items:center;gap:5px;transition:color .2s;}
+.filter-btns button{background:none;border:none;border-left:1px solid #e8e8e4;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#555;padding:0 18px;height:32px;display:flex;align-items:center;gap:5px;transition:color .2s;}
 .filter-btns button:first-child{border-left:none;}
 .filter-btns button:hover{color:#111;}
 .filter-btns button svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2;}
@@ -145,66 +186,94 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .pagination a{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#555;border:1px solid transparent;transition:all .2s;}
 .pagination a.on{border-color:#111;color:#111;}
 
+/* ── 관리자 상품 추가 폼 ── */
+.admin-panel{background:#f5f5f3;border:1px solid #e0e0da;padding:28px 32px;margin:0 32px 28px;display:none;}
+.admin-panel.show{display:block;}
+.admin-panel h3{font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:20px;color:#555;}
+.admin-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.admin-form-grid input,.admin-form-grid select{border:1px solid #ddd;padding:10px;font-size:12px;outline:none;width:100%;}
+.admin-form-grid input:focus,.admin-form-grid select:focus{border-color:#111;}
+.img-upload-area{grid-column:1/-1;border:2px dashed #ddd;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;}
+.img-upload-area:hover{border-color:#111;}
+.img-upload-area input{display:none;}
+.img-preview{width:80px;height:80px;object-fit:cover;margin:8px auto 0;}
+.admin-btns{display:flex;gap:10px;margin-top:12px;}
+.btn-primary{background:#111;color:#fff;border:none;padding:10px 24px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;}
+.btn-secondary{background:#fff;color:#111;border:1px solid #ddd;padding:10px 24px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;}
+.btn-danger{background:#c00;color:#fff;border:none;padding:6px 14px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;}
+.admin-toggle-btn{background:#111;color:#fff;border:none;padding:8px 18px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;margin:20px 32px 0;display:none;}
+
 /* ── BRAND 페이지 ── */
 .brand-page-hero{background:#f5f5f3;padding:80px 32px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
 .brand-page-logo{font-size:48px;font-weight:200;letter-spacing:.3em;color:#111;}
 .brand-page-logo em{font-style:normal;font-weight:500;}
-.brand-tagline{font-size:14px;color:#555;line-height:1.9;letter-spacing:.04em;margin-top:16px;}
+.brand-tagline{font-size:14px;color:#555;line-height:1.9;margin-top:16px;}
 .brand-sections{padding:56px 32px;}
 .brand-section{margin-bottom:56px;padding-bottom:56px;border-bottom:1px solid #e8e8e4;}
 .brand-section:last-child{border-bottom:none;}
 .brand-section h3{font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:#aaa;margin-bottom:16px;}
-.brand-section p{font-size:13px;color:#555;line-height:2;letter-spacing:.04em;}
+.brand-section p{font-size:13px;color:#555;line-height:2;}
 .brand-skills{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:24px;}
 .skill-box{padding:24px;border:1px solid #e8e8e4;}
 .skill-box h4{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#111;margin-bottom:8px;}
 .skill-box p{font-size:11px;color:#888;line-height:1.7;}
 
-/* ── 서브 페이지 공통 ── */
+/* ── 서브 페이지 ── */
 .sub-page{display:none;padding:48px 32px 80px;}
 .sub-page.on{display:block;}
 .sub-page-title{font-size:13px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid #e8e8e4;}
 
-/* ── 게시판 (공지사항 / FAQ) ── */
+/* ── 게시판 ── */
 .board-list{list-style:none;}
 .board-item{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #f0f0ee;cursor:pointer;}
 .board-item:hover .b-title{color:#888;}
-.b-num{font-size:10px;color:#ccc;width:32px;flex-shrink:0;text-align:center;}
+.b-num{font-size:10px;color:#ccc;width:32px;text-align:center;flex-shrink:0;}
 .b-title{font-size:12px;color:#111;flex:1;transition:color .2s;}
 .b-date{font-size:10px;color:#aaa;flex-shrink:0;}
-.board-admin-btn{margin-bottom:16px;display:none;}
-.board-admin-btn button{background:#111;color:#fff;border:none;padding:8px 18px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;}
-.board-admin-btn.show{display:block;}
-.admin-form{background:#f5f5f3;padding:24px;margin-bottom:24px;display:none;}
-.admin-form.show{display:block;}
-.admin-form input,.admin-form textarea{width:100%;border:1px solid #ddd;padding:10px;font-family:'DM Sans',sans-serif;font-size:12px;margin-bottom:10px;outline:none;}
-.admin-form textarea{height:120px;resize:vertical;}
-.admin-form .submit-btn{background:#111;color:#fff;border:none;padding:10px 24px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;}
-.board-detail{display:none;padding:24px;border:1px solid #e8e8e4;}
+.board-write-btn{background:#111;color:#fff;border:none;padding:8px 18px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;margin-bottom:16px;display:none;}
+.admin-write-form{background:#f5f5f3;padding:24px;margin-bottom:24px;display:none;}
+.admin-write-form.show{display:block;}
+.admin-write-form input,.admin-write-form textarea{width:100%;border:1px solid #ddd;padding:10px;font-size:12px;margin-bottom:10px;outline:none;}
+.admin-write-form textarea{height:120px;resize:vertical;}
+.admin-write-form .submit-btn{background:#111;color:#fff;border:none;padding:10px 24px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;}
+.board-detail{display:none;padding:24px;border:1px solid #e8e8e4;margin-bottom:20px;}
 .board-detail.show{display:block;}
 .bd-title{font-size:16px;font-weight:400;margin-bottom:8px;}
 .bd-date{font-size:10px;color:#aaa;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #e8e8e4;}
 .bd-body{font-size:12px;color:#555;line-height:1.9;}
-.bd-back{background:none;border:1px solid #ddd;padding:8px 16px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-top:20px;cursor:pointer;}
+.bd-back{background:none;border:1px solid #ddd;padding:8px 16px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-top:20px;}
 
-/* ── 문의 페이지 ── */
-.contact-page{max-width:640px;}
-.contact-methods{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:40px;}
-.contact-card{border:1px solid #e8e8e4;padding:32px 28px;cursor:pointer;transition:border-color .2s,background .2s;text-decoration:none;display:block;}
+/* ── 문의 ── */
+.contact-methods{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px;max-width:600px;}
+.contact-card{border:1px solid #e8e8e4;padding:32px 28px;cursor:pointer;transition:border-color .2s,background .2s;display:block;}
 .contact-card:hover{border-color:#111;background:#fafaf8;}
-.contact-card .cc-icon{font-size:24px;margin-bottom:12px;}
-.contact-card .cc-name{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#111;margin-bottom:6px;}
-.contact-card .cc-desc{font-size:11px;color:#888;line-height:1.6;}
-.contact-note{font-size:11px;color:#aaa;line-height:1.8;padding:20px;background:#f5f5f3;}
+.cc-icon{font-size:24px;margin-bottom:12px;}
+.cc-name{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#111;margin-bottom:6px;}
+.cc-desc{font-size:11px;color:#888;line-height:1.6;}
+.contact-note{font-size:11px;color:#666;line-height:1.9;padding:20px;background:#f5f5f3;max-width:600px;}
 
-/* ── 법률 페이지 ── */
+/* ── 법률 ── */
 .legal-content{max-width:720px;}
-.legal-content h2{font-size:14px;font-weight:500;letter-spacing:.1em;margin:28px 0 10px;}
+.legal-content h2{font-size:14px;font-weight:500;margin:28px 0 10px;}
 .legal-content p{font-size:12px;color:#555;line-height:1.9;margin-bottom:12px;}
 .legal-content ul{padding-left:20px;margin-bottom:12px;}
 .legal-content ul li{font-size:12px;color:#555;line-height:1.9;}
 
-/* ── About/Order/Process 페이지 ── */
+/* ── 회원가입/로그인 ── */
+.auth-wrap{max-width:400px;}
+.auth-wrap input{width:100%;border:1px solid #ddd;padding:12px;font-size:12px;margin-bottom:10px;outline:none;}
+.auth-wrap input:focus{border-color:#111;}
+.auth-wrap .btn-full{width:100%;padding:13px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;border:none;margin-bottom:10px;cursor:pointer;}
+.auth-wrap .btn-black{background:#111;color:#fff;}
+.auth-wrap .btn-outline{background:#fff;color:#111;border:1px solid #ddd;}
+.auth-tabs{display:flex;margin-bottom:24px;border-bottom:1px solid #e8e8e4;}
+.auth-tab{font-size:11px;letter-spacing:.18em;text-transform:uppercase;padding:0 0 12px;margin-right:24px;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;color:#aaa;cursor:pointer;}
+.auth-tab.on{color:#111;border-bottom-color:#111;}
+.auth-msg{font-size:11px;margin-top:12px;padding:10px;text-align:center;}
+.auth-msg.error{background:#fff0f0;color:#c00;}
+.auth-msg.success{background:#f0fff0;color:#060;}
+
+/* ── 정보 페이지 ── */
 .info-content{max-width:680px;}
 .info-content h2{font-size:13px;font-weight:500;letter-spacing:.15em;margin:32px 0 12px;padding-bottom:10px;border-bottom:1px solid #e8e8e4;}
 .info-content p{font-size:12px;color:#555;line-height:1.9;margin-bottom:12px;}
@@ -228,8 +297,14 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 .footer-links a{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#888;transition:color .2s;}
 .footer-links a:hover{color:#111;}
 .footer-sns{display:flex;align-items:center;gap:16px;}
-.footer-sns a{color:#888;font-size:10px;letter-spacing:.1em;transition:color .2s;}
+.footer-sns a{color:#888;font-size:10px;transition:color .2s;}
 .footer-sns svg{width:16px;height:16px;stroke:#888;fill:none;stroke-width:1.5;display:block;}
+
+/* ── 로딩 ── */
+.loading{text-align:center;padding:60px;font-size:11px;color:#aaa;letter-spacing:.15em;text-transform:uppercase;}
+
+.admin-only{display:none;}
+.admin-only-flex{display:none;}
 </style>
 </head>
 <body>
@@ -246,42 +321,40 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
     <a onclick="nav('brand')">BRAND</a>
   </nav>
   <div class="header-icons">
-    <button onclick="toggleSearch()" title="검색"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
-    <button onclick="openCart()" title="장바구니"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span class="cart-badge" id="cartCount">0</span></button>
-    <button onclick="nav('login')" title="로그인"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
-    <button onclick="toggleSideMenu()" title="메뉴"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <button onclick="toggleSearch()"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
+    <button onclick="nav('cart')"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span class="cart-badge" id="cartCount">0</span></button>
+    <button onclick="handleAuthBtn()" id="headerLoginBtn"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+    <button onclick="toggleSide()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
   </div>
 </header>
 
-<!-- ── 햄버거 사이드 메뉴 ── -->
-<div class="side-menu-bg" id="sideMenuBg" onclick="toggleSideMenu()"></div>
+<!-- ── 사이드 메뉴 ── -->
+<div class="side-bg" id="sideBg" onclick="toggleSide()"></div>
 <div class="side-menu" id="sideMenu">
-  <button class="side-close" onclick="toggleSideMenu()">CLOSE</button>
-  <div class="side-section">
+  <button class="side-close" onclick="toggleSide()">CLOSE</button>
+  <div class="side-sec">
     <h4>SHOP</h4>
     <ul class="side-links">
-      <li><a onclick="nav('props');toggleSideMenu()">Order Made Props</a></li>
-      <li><a onclick="nav('furniture');toggleSideMenu()">Furniture</a></li>
-      <li><a onclick="nav('lighting');toggleSideMenu()">Lighting</a></li>
-      <li><a onclick="nav('object');toggleSideMenu()">Object</a></li>
-      <li><a onclick="nav('craft');toggleSideMenu()">Craft</a></li>
-      <li><a onclick="nav('lighting');toggleSideMenu()">Living Item</a></li>
+      <li><a onclick="nav('props');toggleSide()">Order Made Props</a></li>
+      <li><a onclick="nav('furniture');toggleSide()">Furniture</a></li>
+      <li><a onclick="nav('lighting');toggleSide()">Lighting</a></li>
+      <li><a onclick="nav('object');toggleSide()">Object</a></li>
+      <li><a onclick="nav('craft');toggleSide()">Craft</a></li>
     </ul>
   </div>
-  <hr class="side-divider">
+  <hr class="side-hr">
   <ul class="side-links">
-    <li><a class="bold" onclick="nav('promotion');toggleSideMenu()">PROMOTION</a></li>
-    <li><a class="bold" onclick="nav('brand');toggleSideMenu()">BRAND</a></li>
-    <li><a class="bold" onclick="nav('story');toggleSideMenu()">EIDOS STORY</a></li>
+    <li><a class="bold" onclick="nav('brand');toggleSide()">BRAND</a></li>
+    <li><a class="bold" onclick="nav('story');toggleSide()">EIDOS STORY</a></li>
   </ul>
-  <hr class="side-divider">
+  <hr class="side-hr">
   <ul class="side-util">
-    <li><a onclick="nav('login');toggleSideMenu()">LOGIN</a></li>
-    <li><a onclick="nav('login');toggleSideMenu()">WISHLIST (0)</a></li>
+    <li><a onclick="handleAuthBtn();toggleSide()" id="sideAuthLink">로그인</a></li>
+    <li><a onclick="nav('cart');toggleSide()">장바구니 (0)</a></li>
   </ul>
 </div>
 
-<!-- ── 검색 오버레이 ── -->
+<!-- ── 검색 ── -->
 <div class="search-overlay" id="searchOverlay">
   <button class="search-close" onclick="toggleSearch()">CLOSE</button>
   <div class="search-box">
@@ -290,10 +363,8 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   </div>
 </div>
 
-<!-- ════════════════════════════════ 메인 홈 ════════════════════════════════ -->
+<!-- ════ 메인 홈 ════ -->
 <div id="pg-home">
-
-  <!-- 히어로 -->
   <div class="hero-slider">
     <div class="hero-slides" id="heroSlides">
       <div class="hero-slide"><img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1600&q=80" alt=""><div class="slide-text"><div class="s-brand">EIDOS STUDIO</div><h2>Art Furniture<br>&amp; Prop Studio</h2><p>금속·목공·3D 프린팅·도색</p></div></div>
@@ -309,32 +380,23 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   <div class="sec-wrap" style="padding-bottom:0">
     <div class="sec-label">PROMOTION</div>
     <div class="promo-grid">
-      <div class="promo-item"><img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80" alt=""><div class="ptxt"><div class="pb">ORDER MADE PROPS</div><div class="pt">MV &amp; AD Props</div><div class="pd">아이돌 MV·광고 소품 전문 제작</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Jewel Box Chrome</div><div class="ppp">KRW 880,000</div></div></div><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1571079570759-8b8800f7b3f7?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Crystal Orb Stand</div><div class="ppp">KRW 760,000</div></div></div></div></div>
-      <div class="promo-item"><img src="https://images.unsplash.com/photo-1540574163026-643ea20ade25?w=600&q=80" alt=""><div class="ptxt"><div class="pb">FURNITURE</div><div class="pt">Handcrafted Furniture</div><div class="pd">주문 제작 아트 퍼니처</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Raw Steel Dining Chair</div><div class="ppp">KRW 980,000</div></div></div><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Walnut Side Table</div><div class="ppp">KRW 1,440,000</div></div></div></div></div>
-      <div class="promo-item"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""><div class="ptxt"><div class="pb">LIGHTING</div><div class="pt">Art Lighting</div><div class="pd">공간의 분위기를 바꾸는 조명</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Pendant Cluster Brass</div><div class="ppp">KRW 1,760,000</div></div></div><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1540932239986-30128078f3c5?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Wall Sconce Matte</div><div class="ppp">KRW 880,000</div></div></div></div></div>
-      <div class="promo-item"><img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80" alt=""><div class="ptxt"><div class="pb">OBJECT</div><div class="pt">Art Object</div><div class="pd">공간을 완성하는 오브제</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Abstract Sculpture No.3</div><div class="ppp">KRW 580,000</div></div></div><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Metal Bowl Hammered</div><div class="ppp">KRW 240,000</div></div></div></div></div>
+      <div class="promo-item"><img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80" alt=""><div class="ptxt"><div class="pb">ORDER MADE PROPS</div><div class="pt">MV &amp; AD Props</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Jewel Box Chrome</div><div class="ppp">KRW 880,000</div></div></div></div></div>
+      <div class="promo-item"><img src="https://images.unsplash.com/photo-1540574163026-643ea20ade25?w=600&q=80" alt=""><div class="ptxt"><div class="pb">FURNITURE</div><div class="pt">Handcrafted Furniture</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Raw Steel Dining Chair</div><div class="ppp">KRW 980,000</div></div></div></div></div>
+      <div class="promo-item"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""><div class="ptxt"><div class="pb">LIGHTING</div><div class="pt">Art Lighting</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Pendant Cluster Brass</div><div class="ppp">KRW 1,760,000</div></div></div></div></div>
+      <div class="promo-item"><img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80" alt=""><div class="ptxt"><div class="pb">OBJECT</div><div class="pt">Art Object</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Abstract Sculpture No.3</div><div class="ppp">KRW 580,000</div></div></div></div></div>
     </div>
   </div>
 
   <!-- CURRENT VIEW -->
   <div class="sec-wrap">
     <div class="sec-label">CURRENT VIEW</div>
-    <div class="cv-grid">
-      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">ORDER MADE PROPS · MV</div><div class="cv-title">에스파 Supernova MV — 크롬 주얼 박스</div><div class="cv-desc">레진 3D 프린팅으로 조형한 뒤 크롬 도색을 입혀 완성한 보석함 소품. 아이돌 MV 촬영에 활용됐습니다.</div><div class="cv-date">2024. 09</div></div></div>
-      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">FURNITURE · 주문 제작</div><div class="cv-title">아치형 콘솔 테이블 — 마블 탑</div><div class="cv-desc">금속 프레임과 대리석 상판의 결합. 주거 공간을 위한 주문 제작 콘솔 테이블입니다.</div><div class="cv-date">2024. 06</div></div></div>
-      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">LIGHTING · 주문 제작</div><div class="cv-title">아크 플로어 램프 — 블랙</div><div class="cv-desc">수작업 금속 가공으로 제작한 아크 형태의 플로어 램프. 공간의 분위기를 조각처럼 완성합니다.</div><div class="cv-date">2024. 03</div></div></div>
-    </div>
+    <div class="cv-grid" id="cvGrid"><div class="loading">Loading...</div></div>
   </div>
 
   <!-- CURATED BY EIDOS -->
   <div class="sec-wrap">
     <div class="sec-label">CURATED BY EIDOS</div>
-    <div class="prod-grid">
-      <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Iron Frame Sofa — Natural</div><div class="pprice">KRW 3,200,000</div></div>
-      <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Jewel Box — Chrome</div><div class="pprice">KRW 880,000</div></div>
-      <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Arc Floor Lamp — Black</div><div class="pprice"><span class="orig">KRW 1,980,000</span>KRW 1,584,000<span class="off">20% OFF</span></div></div>
-      <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Resin Tray — Amber</div><div class="pprice">KRW 196,000</div></div>
-    </div>
+    <div class="prod-grid" id="curatedGrid"><div class="loading">Loading...</div></div>
   </div>
 
   <!-- UPCOMING -->
@@ -347,28 +409,57 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
       <div class="up-item"><div class="up-img"><img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400&q=70" alt=""></div><div class="up-tag">CRAFT</div><div class="up-name">Oak &amp; Steel Collection</div><div class="up-date">2026 / 09</div></div>
     </div>
   </div>
-
-</div><!-- /pg-home -->
+</div>
 
 <!-- ════ 카테고리 페이지들 ════ -->
-<div id="pg-props" class="cat-page"><div class="cat-head"><div class="cat-name-ttl">Order Made Props</div><div class="sub-tabs"><a class="on">ALL</a><a>MV Props</a><a>AD Props</a><a>Custom Order</a></div></div><div class="filter-row"><span class="prod-count-lbl">5 PRODUCTS</span><div class="filter-btns"><button>SORT BY <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button><button>MATERIAL</button></div></div><div class="cat-grid"><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Jewel Box — Chrome Edition</div><div class="pprice">KRW 880,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1571079570759-8b8800f7b3f7?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Geometric Vase — MV Prop</div><div class="pprice">KRW 320,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1567016432779-094069958ea5?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Crystal Orb Stand</div><div class="pprice"><span class="orig">KRW 950,000</span>KRW 760,000<span class="off">20% OFF</span></div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Arch Frame — Gold</div><div class="pprice">KRW 640,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Pedestal Column — Black</div><div class="pprice">KRW 480,000</div></div></div><div class="pagination"><a class="on">1</a><a>2</a><a>→</a></div></div>
+<div id="pg-props" class="cat-page">
+  <div class="cat-head"><div class="cat-name-ttl">Order Made Props</div><div class="sub-tabs"><a class="on">ALL</a><a>MV Props</a><a>AD Props</a><a>Custom Order</a></div></div>
+  <div class="filter-row"><span class="prod-count-lbl" id="count-props">0 PRODUCTS</span><div class="filter-btns"><button>SORT BY <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button></div></div>
+  <button class="admin-toggle-btn admin-only" id="addBtn-props" onclick="toggleAdminPanel('props')">+ 상품 추가</button>
+  <div class="admin-panel" id="adminPanel-props"></div>
+  <div class="cat-grid" id="grid-props"><div class="loading">Loading...</div></div>
+</div>
 
-<div id="pg-furniture" class="cat-page"><div class="cat-head"><div class="cat-name-ttl">Furniture</div><div class="sub-tabs"><a class="on">ALL</a><a>Chair</a><a>Table</a><a>Storage</a><a>Bench &amp; Stool</a></div></div><div class="filter-row"><span class="prod-count-lbl">5 PRODUCTS</span><div class="filter-btns"><button>SORT BY <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button><button>MATERIAL</button></div></div><div class="cat-grid"><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Iron Frame Sofa</div><div class="pprice">KRW 3,200,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Raw Steel Dining Chair</div><div class="pprice">KRW 980,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Walnut Side Table</div><div class="pprice"><span class="orig">KRW 1,800,000</span>KRW 1,440,000<span class="off">20% OFF</span></div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1549187774-b4e9b0445b41?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Steel Shelf Unit</div><div class="pprice">KRW 2,400,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1524758870432-af57e54afa26?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Bent Steel Bench</div><div class="pprice">KRW 1,650,000</div></div></div><div class="pagination"><a class="on">1</a><a>2</a><a>→</a></div></div>
+<div id="pg-furniture" class="cat-page">
+  <div class="cat-head"><div class="cat-name-ttl">Furniture</div><div class="sub-tabs"><a class="on">ALL</a><a>Chair</a><a>Table</a><a>Storage</a><a>Bench &amp; Stool</a></div></div>
+  <div class="filter-row"><span class="prod-count-lbl" id="count-furniture">0 PRODUCTS</span><div class="filter-btns"><button>SORT BY <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button></div></div>
+  <button class="admin-toggle-btn admin-only" id="addBtn-furniture" onclick="toggleAdminPanel('furniture')">+ 상품 추가</button>
+  <div class="admin-panel" id="adminPanel-furniture"></div>
+  <div class="cat-grid" id="grid-furniture"><div class="loading">Loading...</div></div>
+</div>
 
-<div id="pg-lighting" class="cat-page"><div class="cat-head"><div class="cat-name-ttl">Lighting</div><div class="sub-tabs"><a class="on">ALL</a><a>Floor</a><a>Wall</a><a>Table</a><a>Pendant</a></div></div><div class="filter-row"><span class="prod-count-lbl">5 PRODUCTS</span><div class="filter-btns"><button>SORT BY <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button></div></div><div class="cat-grid"><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Arc Floor Lamp — Black</div><div class="pprice">KRW 1,980,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Pendant Cluster — Brass</div><div class="pprice"><span class="orig">KRW 2,200,000</span>KRW 1,760,000<span class="off">20% OFF</span></div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1540932239986-30128078f3c5?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Wall Sconce — Matte</div><div class="pprice">KRW 880,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Table Lamp — Steel Base</div><div class="pprice">KRW 760,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1551516594-56cb78394645?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Spot Rail Light — 3 Head</div><div class="pprice">KRW 1,430,000</div></div></div><div class="pagination"><a class="on">1</a><a>2</a><a>→</a></div></div>
+<div id="pg-lighting" class="cat-page">
+  <div class="cat-head"><div class="cat-name-ttl">Lighting</div><div class="sub-tabs"><a class="on">ALL</a><a>Floor</a><a>Wall</a><a>Table</a><a>Pendant</a></div></div>
+  <div class="filter-row"><span class="prod-count-lbl" id="count-lighting">0 PRODUCTS</span><div class="filter-btns"><button>SORT BY <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button></div></div>
+  <button class="admin-toggle-btn admin-only" id="addBtn-lighting" onclick="toggleAdminPanel('lighting')">+ 상품 추가</button>
+  <div class="admin-panel" id="adminPanel-lighting"></div>
+  <div class="cat-grid" id="grid-lighting"><div class="loading">Loading...</div></div>
+</div>
 
-<div id="pg-object" class="cat-page"><div class="cat-head"><div class="cat-name-ttl">Object</div><div class="sub-tabs"><a class="on">ALL</a><a>Art Object</a><a>Deco</a><a>Sculpture</a></div></div><div class="filter-row"><span class="prod-count-lbl">5 PRODUCTS</span><div class="filter-btns"><button>SORT BY <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button></div></div><div class="cat-grid"><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1571079570759-8b8800f7b3f7?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Geometric Vase — Black</div><div class="pprice">KRW 320,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Abstract Sculpture No.3</div><div class="pprice">KRW 580,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Resin Tray — Amber</div><div class="pprice"><span class="orig">KRW 280,000</span>KRW 196,000<span class="off">30% OFF</span></div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Metal Bowl — Hammered</div><div class="pprice">KRW 240,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Candle Holder Set</div><div class="pprice">KRW 180,000</div></div></div><div class="pagination"><a class="on">1</a><a>2</a><a>→</a></div></div>
+<div id="pg-object" class="cat-page">
+  <div class="cat-head"><div class="cat-name-ttl">Object</div><div class="sub-tabs"><a class="on">ALL</a><a>Art Object</a><a>Deco</a><a>Sculpture</a></div></div>
+  <div class="filter-row"><span class="prod-count-lbl" id="count-object">0 PRODUCTS</span><div class="filter-btns"><button>SORT BY <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button></div></div>
+  <button class="admin-toggle-btn admin-only" id="addBtn-object" onclick="toggleAdminPanel('object')">+ 상품 추가</button>
+  <div class="admin-panel" id="adminPanel-object"></div>
+  <div class="cat-grid" id="grid-object"><div class="loading">Loading...</div></div>
+</div>
 
-<div id="pg-craft" class="cat-page"><div class="cat-head"><div class="cat-name-ttl">Craft</div><div class="sub-tabs"><a class="on">ALL</a><a>Metal Work</a><a>Wood Work</a><a>Mixed Media</a></div></div><div class="filter-row"><span class="prod-count-lbl">5 PRODUCTS</span><div class="filter-btns"><button>SORT BY <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button></div></div><div class="cat-grid"><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1524758870432-af57e54afa26?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Welded Steel Frame</div><div class="pprice">KRW 720,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Oak Wood Panel</div><div class="pprice"><span class="orig">KRW 560,000</span>KRW 448,000<span class="off">20% OFF</span></div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1567016432779-094069958ea5?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Iron &amp; Wood Cabinet</div><div class="pprice">KRW 2,800,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1549187774-b4e9b0445b41?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Mixed Media Totem</div><div class="pprice">KRW 1,100,000</div></div><div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Forged Hook Set</div><div class="pprice">KRW 340,000</div></div></div><div class="pagination"><a class="on">1</a><a>2</a><a>→</a></div></div>
+<div id="pg-craft" class="cat-page">
+  <div class="cat-head"><div class="cat-name-ttl">Craft</div><div class="sub-tabs"><a class="on">ALL</a><a>Metal Work</a><a>Wood Work</a><a>Mixed Media</a></div></div>
+  <div class="filter-row"><span class="prod-count-lbl" id="count-craft">0 PRODUCTS</span><div class="filter-btns"><button>SORT BY <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button></div></div>
+  <button class="admin-toggle-btn admin-only" id="addBtn-craft" onclick="toggleAdminPanel('craft')">+ 상품 추가</button>
+  <div class="admin-panel" id="adminPanel-craft"></div>
+  <div class="cat-grid" id="grid-craft"><div class="loading">Loading...</div></div>
+</div>
 
-<!-- ════ BRAND 페이지 ════ -->
+<!-- BRAND -->
 <div id="pg-brand" class="cat-page">
   <div class="brand-page-hero">
     <div><div class="brand-page-logo"><em>e</em>IDOS STUDIO</div><p class="brand-tagline">금속·목공·3D 프린팅·도색의 교차점에서<br>공간과 장면을 위한 오브제를 설계하고 구현합니다.<br><br>2022년 9월, 경기도 의왕에서 시작한 1인 제조 스튜디오.</p></div>
     <div><img src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=80" alt="" style="aspect-ratio:4/3;object-fit:cover;"></div>
   </div>
   <div class="brand-sections">
-    <div class="brand-section"><h3>About</h3><p>에이도스 스튜디오는 아이돌 뮤직비디오, 광고, 공간 인테리어를 위한 소품 및 퍼니처를 제작하는 1인 제조 스튜디오입니다. 라이노(Rhino)와 지브러쉬(ZBrush)를 활용한 3D 모델링부터 실물 제작, 도색, 현장 연출까지 전 과정을 직접 수행합니다.</p></div>
+    <div class="brand-section"><h3>About</h3><p>에이도스 스튜디오(EIDOS STUDIO)는 2022년 9월 경기도 의왕에서 시작한 1인 제조 스튜디오입니다. 금속, 목공, 3D 프린팅, 도색 기술을 결합하여 아트 퍼니처, 소품, 오브제를 제작합니다.</p></div>
     <div class="brand-section"><h3>Skills</h3>
       <div class="brand-skills">
         <div class="skill-box"><h4>3D Modeling</h4><p>Rhino · ZBrush 활용<br>정밀 모델링 및 레진 출력</p></div>
@@ -381,334 +472,376 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   </div>
 </div>
 
-<!-- ════ 서브 페이지들 ════ -->
+<!-- 서브 페이지들 -->
+<div id="pg-login" class="sub-page">
+  <div class="sub-page-title" id="authTitle">LOGIN</div>
+  <div class="auth-wrap">
+    <div class="auth-tabs">
+      <button class="auth-tab on" onclick="switchAuthTab('login')">로그인</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">회원가입</button>
+    </div>
+    <div id="loginForm">
+      <input type="email" id="loginEmail" placeholder="이메일">
+      <input type="password" id="loginPw" placeholder="비밀번호">
+      <button class="btn-full btn-black" onclick="doLogin()">LOGIN</button>
+    </div>
+    <div id="signupForm" style="display:none">
+      <input type="text" id="signupName" placeholder="이름">
+      <input type="email" id="signupEmail" placeholder="이메일">
+      <input type="password" id="signupPw" placeholder="비밀번호 (6자리 이상)">
+      <input type="password" id="signupPw2" placeholder="비밀번호 확인">
+      <button class="btn-full btn-black" onclick="doSignup()">회원가입</button>
+    </div>
+    <div id="authMsg" class="auth-msg" style="display:none"></div>
+  </div>
+</div>
 
-<!-- About -->
+<div id="pg-notice" class="sub-page">
+  <div class="sub-page-title">공지사항</div>
+  <button class="board-write-btn admin-only" onclick="toggleWriteForm('notice')">+ 글 작성</button>
+  <div class="admin-write-form" id="noticeWriteForm">
+    <input type="text" id="noticeTitleInput" placeholder="제목">
+    <textarea id="noticeBodyInput" placeholder="내용"></textarea>
+    <button class="submit-btn" onclick="submitPost('notice')">등록</button>
+  </div>
+  <div class="board-detail" id="noticeDetail"></div>
+  <ul class="board-list" id="noticeList"></ul>
+</div>
+
+<div id="pg-faq" class="sub-page">
+  <div class="sub-page-title">FAQ</div>
+  <button class="board-write-btn admin-only" onclick="toggleWriteForm('faq')">+ 글 작성</button>
+  <div class="admin-write-form" id="faqWriteForm">
+    <input type="text" id="faqTitleInput" placeholder="질문">
+    <textarea id="faqBodyInput" placeholder="답변"></textarea>
+    <button class="submit-btn" onclick="submitPost('faq')">등록</button>
+  </div>
+  <div class="board-detail" id="faqDetail"></div>
+  <ul class="board-list" id="faqList"></ul>
+</div>
+
+<div id="pg-contact" class="sub-page">
+  <div class="sub-page-title" id="contactTitle">프로젝트 문의</div>
+  <div class="contact-methods">
+    <a class="contact-card" href="https://www.instagram.com/direct/new/" target="_blank"><div class="cc-icon">📸</div><div class="cc-name">Instagram DM</div><div class="cc-desc">인스타그램 DM으로 문의해주시면 빠르게 답변드립니다.</div></a>
+    <a class="contact-card" href="https://pf.kakao.com/" target="_blank"><div class="cc-icon">💬</div><div class="cc-name">KakaoTalk Channel</div><div class="cc-desc">카카오톡 채널로 문의하시면 업무 시간 내 답변드립니다.</div></a>
+  </div>
+  <div class="contact-note">📌 운영 시간: 평일 10:00 – 18:00<br>📌 이메일: hello@eidosstudio.co.kr</div>
+</div>
+
 <div id="pg-about" class="sub-page">
   <div class="sub-page-title">ABOUT</div>
   <div class="info-content">
     <h2>스튜디오 소개</h2>
-    <p>에이도스 스튜디오(EIDOS STUDIO)는 2022년 9월 경기도 의왕에서 시작한 1인 제조 스튜디오입니다. 금속, 목공, 3D 프린팅, 도색 기술을 결합하여 아트 퍼니처, 소품, 오브제를 제작합니다.</p>
-    <p>미술감독의 의뢰를 받아 아이돌 뮤직비디오와 광고 소품을 주문 제작하는 것이 주요 업무이며, 라이노(Rhino)·지브러쉬(ZBrush) 모델링부터 출력, 금속/목공 작업, 도색, 현장 연출까지 전 공정을 직접 수행합니다.</p>
+    <p>에이도스 스튜디오(EIDOS STUDIO)는 2022년 9월 경기도 의왕에서 시작한 1인 제조 스튜디오입니다.</p>
     <h2>철학</h2>
-    <p>모든 작업물은 그 맥락—공간이든 화면이든—을 위해 설계됩니다. 에이도스 스튜디오는 단순한 제작소가 아닌 크리에이티브 파트너로서 함께 작업합니다.</p>
+    <p>모든 작업물은 그 맥락—공간이든 화면이든—을 위해 설계됩니다.</p>
   </div>
 </div>
 
-<!-- Order Guide -->
 <div id="pg-orderguide" class="sub-page">
   <div class="sub-page-title">ORDER GUIDE</div>
   <div class="info-content">
-    <h2>주문 방법</h2>
-    <p>온라인 스토어에서 바로 구매하시거나, 주문 제작 문의를 통해 상담 후 제작을 진행합니다.</p>
-    <h2>배송 안내</h2>
-    <p>일반 상품은 결제 완료 후 3~5 영업일 이내 발송됩니다. 주문 제작 상품은 상담 후 일정을 안내드립니다. 대형 가구의 경우 별도 배송 협의가 필요합니다.</p>
-    <h2>교환 및 환불</h2>
-    <p>상품 수령 후 7일 이내 미개봉·미사용 상태에서 교환 및 환불이 가능합니다. 주문 제작 상품은 교환·환불이 불가합니다. 불량품의 경우 수령 후 30일 이내 무상 처리합니다.</p>
+    <h2>주문 방법</h2><p>온라인 스토어에서 바로 구매하시거나, 주문 제작 문의를 통해 상담 후 진행합니다.</p>
+    <h2>배송 안내</h2><p>결제 완료 후 3~5 영업일 이내 발송됩니다. 주문 제작 상품은 상담 후 일정 안내드립니다.</p>
+    <h2>교환 및 환불</h2><p>수령 후 7일 이내 미개봉·미사용 상태에서 가능합니다. 주문 제작 상품은 불가합니다.</p>
   </div>
 </div>
 
-<!-- Process -->
 <div id="pg-process" class="sub-page">
   <div class="sub-page-title">PROCESS</div>
   <div class="info-content">
-    <p>에이도스 스튜디오의 제작 과정입니다.</p>
     <div class="process-steps">
-      <div class="p-step"><div class="p-step-num">01</div><div class="p-step-body"><h4>상담 및 기획</h4><p>의뢰 내용을 파악하고 레퍼런스, 소재, 사이즈, 납기를 협의합니다.</p></div></div>
-      <div class="p-step"><div class="p-step-num">02</div><div class="p-step-body"><h4>3D 모델링</h4><p>Rhino·ZBrush를 활용하여 정밀 모델링 후 시안을 공유합니다.</p></div></div>
-      <div class="p-step"><div class="p-step-num">03</div><div class="p-step-body"><h4>출력 및 가공</h4><p>레진 3D 프린팅 또는 금속·목공 가공으로 실물을 제작합니다.</p></div></div>
-      <div class="p-step"><div class="p-step-num">04</div><div class="p-step-body"><h4>도색 및 마감</h4><p>크롬, 무광, 특수 도색 등 원하는 질감으로 마감합니다.</p></div></div>
+      <div class="p-step"><div class="p-step-num">01</div><div class="p-step-body"><h4>상담 및 기획</h4><p>레퍼런스, 소재, 사이즈, 납기를 협의합니다.</p></div></div>
+      <div class="p-step"><div class="p-step-num">02</div><div class="p-step-body"><h4>3D 모델링</h4><p>Rhino·ZBrush로 정밀 모델링 후 시안을 공유합니다.</p></div></div>
+      <div class="p-step"><div class="p-step-num">03</div><div class="p-step-body"><h4>출력 및 가공</h4><p>레진 3D 프린팅 또는 금속·목공 가공으로 제작합니다.</p></div></div>
+      <div class="p-step"><div class="p-step-num">04</div><div class="p-step-body"><h4>도색 및 마감</h4><p>크롬, 무광, 특수 도색 등으로 마감합니다.</p></div></div>
       <div class="p-step"><div class="p-step-num">05</div><div class="p-step-body"><h4>납품 및 연출</h4><p>촬영 현장 납품 또는 설치·연출까지 지원합니다.</p></div></div>
     </div>
   </div>
 </div>
 
-<!-- 공지사항 게시판 -->
-<div id="pg-notice" class="sub-page">
-  <div class="sub-page-title">공지사항</div>
-  <div class="board-admin-btn" id="noticeAdminBtn"><button onclick="toggleAdminForm('notice')">+ 글 작성 (관리자)</button></div>
-  <div class="admin-form" id="noticeForm">
-    <input type="text" id="noticeTitleInput" placeholder="제목">
-    <textarea id="noticeBodyInput" placeholder="내용"></textarea>
-    <button class="submit-btn" onclick="submitPost('notice')">등록</button>
-  </div>
-  <div id="noticeDetail" class="board-detail"></div>
-  <ul class="board-list" id="noticeList"></ul>
-</div>
-
-<!-- FAQ 게시판 -->
-<div id="pg-faq" class="sub-page">
-  <div class="sub-page-title">FAQ</div>
-  <div class="board-admin-btn" id="faqAdminBtn"><button onclick="toggleAdminForm('faq')">+ 글 작성 (관리자)</button></div>
-  <div class="admin-form" id="faqForm">
-    <input type="text" id="faqTitleInput" placeholder="질문">
-    <textarea id="faqBodyInput" placeholder="답변"></textarea>
-    <button class="submit-btn" onclick="submitPost('faq')">등록</button>
-  </div>
-  <div id="faqDetail" class="board-detail"></div>
-  <ul class="board-list" id="faqList"></ul>
-</div>
-
-<!-- 문의 페이지 (프로젝트 문의 / B2B / 1:1) -->
-<div id="pg-contact" class="sub-page">
-  <div class="sub-page-title" id="contactTitle">프로젝트 문의</div>
-  <div class="contact-page">
-    <div class="contact-methods">
-      <a class="contact-card" href="https://www.instagram.com/direct/new/" target="_blank">
-        <div class="cc-icon">📸</div>
-        <div class="cc-name">Instagram DM</div>
-        <div class="cc-desc">인스타그램 DM으로 문의해주시면 빠르게 답변드립니다.</div>
-      </a>
-      <a class="contact-card" href="https://open.kakao.com/o/eidos_studio" target="_blank">
-        <div class="cc-icon">💬</div>
-        <div class="cc-name">KakaoTalk Channel</div>
-        <div class="cc-desc">카카오톡 채널로 문의하시면 업무 시간 내 답변드립니다.</div>
-      </a>
-    </div>
-    <div class="contact-note">
-      📌 운영 시간: 평일 10:00 – 18:00<br>
-      📌 프로젝트 문의 시 참고 이미지, 사이즈, 납기 등을 함께 보내주시면 빠른 상담이 가능합니다.<br>
-      📌 이메일: hello@eidosstudio.co.kr
-    </div>
-  </div>
-</div>
-
-<!-- Terms of Use -->
 <div id="pg-terms" class="sub-page">
   <div class="sub-page-title">TERMS OF USE</div>
   <div class="legal-content">
-    <h2>제1조 (목적)</h2>
-    <p>본 약관은 에이도스 스튜디오(이하 "스튜디오")가 운영하는 웹사이트(eidosstudio.co.kr)에서 제공하는 서비스의 이용 조건 및 절차, 스튜디오와 이용자 간의 권리·의무·책임사항을 규정함을 목적으로 합니다.</p>
-    <h2>제2조 (저작권)</h2>
-    <p>본 사이트에 게시된 모든 이미지, 텍스트, 디자인, 작업물 사진은 에이도스 스튜디오의 저작물로 보호됩니다. 사전 서면 동의 없이 무단 복제, 배포, 전송, 상업적 이용을 금지합니다.</p>
-    <ul>
-      <li>구매한 상품의 개인 소장 및 비영리 목적 사용은 허용됩니다.</li>
-      <li>상업적 재판매, 복제, 2차 제작물 생성은 별도 계약이 필요합니다.</li>
-      <li>SNS 공유 시 반드시 출처(@eidos.studio)를 표기해야 합니다.</li>
-    </ul>
-    <h2>제3조 (구매 이후 권리)</h2>
-    <p>상품 구매자는 해당 상품에 대한 소유권을 취득하나, 디자인·조형에 대한 지식재산권은 에이도스 스튜디오에 귀속됩니다. 구매자는 해당 작업물을 상업적 목적으로 복제·재판매할 수 없습니다.</p>
-    <h2>제4조 (면책조항)</h2>
-    <p>스튜디오는 이용자의 귀책사유로 인한 서비스 이용 장애에 대해 책임을 지지 않습니다. 천재지변, 불가항력적 사유로 인한 서비스 중단의 경우에도 책임이 면제됩니다.</p>
-    <h2>제5조 (준거법)</h2>
-    <p>본 약관은 대한민국 법률에 따라 해석되며, 분쟁 발생 시 수원지방법원을 관할 법원으로 합니다.</p>
-    <p style="margin-top:24px;color:#aaa;">시행일: 2022년 9월 1일</p>
+    <h2>제1조 (목적)</h2><p>본 약관은 에이도스 스튜디오가 운영하는 웹사이트에서 제공하는 서비스의 이용 조건 및 절차, 권리·의무·책임사항을 규정함을 목적으로 합니다.</p>
+    <h2>제2조 (저작권)</h2><p>본 사이트에 게시된 모든 이미지, 텍스트, 디자인, 작업물 사진은 에이도스 스튜디오의 저작물로 보호됩니다. 무단 복제, 배포, 상업적 이용을 금지합니다.</p>
+    <ul><li>구매한 상품의 개인 소장 및 비영리 목적 사용은 허용됩니다.</li><li>상업적 재판매, 복제는 별도 계약이 필요합니다.</li><li>SNS 공유 시 반드시 출처(@eidos.studio)를 표기해야 합니다.</li></ul>
+    <h2>제3조 (구매 이후 권리)</h2><p>상품 구매자는 소유권을 취득하나, 디자인·조형에 대한 지식재산권은 에이도스 스튜디오에 귀속됩니다.</p>
+    <h2>제4조 (준거법)</h2><p>본 약관은 대한민국 법률에 따라 해석되며, 분쟁 발생 시 수원지방법원을 관할 법원으로 합니다.</p>
   </div>
 </div>
 
-<!-- Privacy Policy -->
 <div id="pg-privacy" class="sub-page">
   <div class="sub-page-title">PRIVACY POLICY</div>
   <div class="legal-content">
-    <h2>수집하는 개인정보 항목</h2>
-    <p>회원가입 시: 이메일, 비밀번호, 이름, 연락처</p>
-    <p>구매 시: 배송지 주소, 결제 정보(토스페이먼츠를 통해 처리되며 카드 정보는 스튜디오에 저장되지 않습니다)</p>
-    <h2>개인정보의 수집 및 이용 목적</h2>
-    <ul>
-      <li>회원 관리 및 본인 확인</li>
-      <li>상품 주문·배송·결제 처리</li>
-      <li>고객 문의 응대</li>
-      <li>프로모션 및 신상품 정보 제공(동의한 경우에 한함)</li>
-    </ul>
-    <h2>개인정보의 보유 및 이용 기간</h2>
-    <p>회원 탈퇴 시까지 보유하며, 관련 법령에 따라 일정 기간 보관이 필요한 경우 해당 기간 동안 보관합니다.</p>
-    <ul>
-      <li>전자상거래 관련 기록: 5년</li>
-      <li>소비자 불만·분쟁 처리 기록: 3년</li>
-    </ul>
-    <h2>개인정보 제3자 제공</h2>
-    <p>스튜디오는 이용자의 동의 없이 개인정보를 제3자에게 제공하지 않습니다. 단, 배송사 및 결제 서비스 제공사(토스페이먼츠)에는 서비스 이행을 위해 최소한의 정보를 제공합니다.</p>
-    <h2>이용자의 권리</h2>
-    <p>이용자는 언제든지 개인정보 조회·수정·삭제·처리 정지를 요청할 수 있습니다. 문의: hello@eidosstudio.co.kr</p>
-    <p style="margin-top:24px;color:#aaa;">시행일: 2022년 9월 1일</p>
+    <h2>수집하는 개인정보 항목</h2><p>회원가입 시: 이메일, 비밀번호, 이름. 구매 시: 배송지 주소, 결제 정보(토스페이먼츠를 통해 처리).</p>
+    <h2>개인정보의 수집 및 이용 목적</h2><ul><li>회원 관리 및 본인 확인</li><li>상품 주문·배송·결제 처리</li><li>고객 문의 응대</li></ul>
+    <h2>개인정보의 보유 기간</h2><p>회원 탈퇴 시까지 보유. 전자상거래 관련 기록: 5년, 소비자 불만 기록: 3년.</p>
+    <h2>이용자의 권리</h2><p>언제든지 개인정보 조회·수정·삭제를 요청할 수 있습니다. 문의: hello@eidosstudio.co.kr</p>
   </div>
 </div>
 
-<!-- 로그인 (UI only — 백엔드 연동 필요) -->
-<div id="pg-login" class="sub-page">
-  <div class="sub-page-title">LOGIN / 회원가입</div>
-  <div style="max-width:400px;">
-    <p style="font-size:11px;color:#888;margin-bottom:24px;line-height:1.8;">로그인·회원가입 기능은 호스팅 서버 연동 후 활성화됩니다.<br>현재는 UI 미리보기 상태입니다.</p>
-    <input type="email" placeholder="이메일" style="width:100%;border:1px solid #ddd;padding:12px;font-family:'DM Sans',sans-serif;font-size:12px;margin-bottom:10px;outline:none;">
-    <input type="password" placeholder="비밀번호" style="width:100%;border:1px solid #ddd;padding:12px;font-family:'DM Sans',sans-serif;font-size:12px;margin-bottom:16px;outline:none;">
-    <button style="width:100%;background:#111;color:#fff;border:none;padding:13px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:12px;">LOGIN</button>
-    <button style="width:100%;background:#fff;color:#111;border:1px solid #ddd;padding:13px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;">회원가입</button>
-    <p style="font-size:10px;color:#aaa;margin-top:16px;text-align:center;">토스페이먼츠 결제는 호스팅 연동 후 활성화됩니다.</p>
-  </div>
-</div>
-
-<!-- ════ 푸터 ════ -->
+<!-- ── 푸터 ── -->
 <footer>
   <div class="footer-main">
-    <div class="f-col">
-      <h4>Customer Care</h4>
-      <ul>
-        <li><span>hello@eidosstudio.co.kr</span></li>
-        <li><span>Weekdays 10:00–18:00</span></li>
-        <li><a onclick="nav('faq')">FAQ</a></li>
-      </ul>
-    </div>
-    <div class="f-col">
-      <h4>Info</h4>
-      <ul>
-        <li><a onclick="nav('about')">About</a></li>
-        <li><a onclick="nav('orderguide')">Order Guide</a></li>
-        <li><a onclick="nav('process')">Process</a></li>
-      </ul>
-    </div>
-    <div class="f-col">
-      <h4>Information</h4>
-      <ul>
-        <li><a onclick="nav('notice')">공지사항</a></li>
-      </ul>
-    </div>
-    <div class="f-col">
-      <h4>Contact</h4>
-      <ul>
-        <li><a onclick="nav('contact','프로젝트 문의')">프로젝트 문의</a></li>
-        <li><a onclick="nav('contact','B2B / 협업')">B2B / 협업</a></li>
-        <li><a onclick="nav('contact','1:1 문의')">1:1 문의</a></li>
-      </ul>
-    </div>
+    <div class="f-col"><h4>Customer Care</h4><ul><li><span>hello@eidosstudio.co.kr</span></li><li><span>Weekdays 10:00–18:00</span></li><li><a onclick="nav('faq')">FAQ</a></li></ul></div>
+    <div class="f-col"><h4>Info</h4><ul><li><a onclick="nav('about')">About</a></li><li><a onclick="nav('orderguide')">Order Guide</a></li><li><a onclick="nav('process')">Process</a></li></ul></div>
+    <div class="f-col"><h4>Information</h4><ul><li><a onclick="nav('notice')">공지사항</a></li></ul></div>
+    <div class="f-col"><h4>Contact</h4><ul><li><a onclick="nav('contact','프로젝트 문의')">프로젝트 문의</a></li><li><a onclick="nav('contact','B2B / 협업')">B2B / 협업</a></li><li><a onclick="nav('contact','1:1 문의')">1:1 문의</a></li></ul></div>
   </div>
   <div class="footer-biz">에이도스 스튜디오 &nbsp;|&nbsp; 대표 홍길동 &nbsp;|&nbsp; 주소 경기도 의왕시 &nbsp;|&nbsp; 이메일 hello@eidosstudio.co.kr<br>사업자등록번호 000-00-00000 &nbsp;|&nbsp; 통신판매업번호 제 0000-경기의왕-00000 호</div>
   <div class="footer-bottom">
-    <div class="footer-links">
-      <a onclick="nav('about')">About</a>
-      <a onclick="nav('terms')">Terms of Use</a>
-      <a onclick="nav('privacy')">Privacy Policy</a>
-    </div>
+    <div class="footer-links"><a onclick="nav('about')">About</a><a onclick="nav('terms')">Terms of Use</a><a onclick="nav('privacy')">Privacy Policy</a></div>
     <div class="footer-sns">
       <a href="https://instagram.com/eidos.studio" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg></a>
-      <a href="#" target="_blank"><svg viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
-      <a href="#" target="_blank" style="font-size:10px;letter-spacing:.08em;">blog</a>
+      <a href="#" style="font-size:10px;letter-spacing:.08em;">blog</a>
     </div>
   </div>
 </footer>
 
 <script>
-// ── 관리자 패스워드 (실제 배포 시 서버 인증으로 교체 필요) ──
-const ADMIN_PW = 'eidos2022';
-let isAdmin = false;
+// ── 슬라이더 ──
+let cur=0,total=3;
+function slideMove(d){cur=(cur+d+total)%total;document.getElementById('heroSlides').style.transform=`translateX(-${cur*100}%)`;document.getElementById('heroCounter').textContent=`${cur+1} / ${total}`;}
+setInterval(()=>slideMove(1),5000);
 
-function checkAdmin() {
-  if (isAdmin) return true;
-  const pw = prompt('관리자 비밀번호를 입력하세요:');
-  if (pw === ADMIN_PW) { isAdmin = true; return true; }
-  alert('비밀번호가 올바르지 않습니다.');
-  return false;
-}
-
-// ── 게시판 데이터 ──
-const boards = {
-  notice: [
-    { id:1, title:'에이도스 스튜디오 오픈 안내', body:'2022년 9월 1일, 에이도스 스튜디오가 문을 열었습니다. 금속·목공·3D 프린팅·도색을 결합한 제조 스튜디오로서 여러분을 찾아갑니다.', date:'2022.09.01' },
-  ],
-  faq: [
-    { id:1, title:'주문 제작은 어떻게 진행되나요?', body:'인스타그램 DM 또는 카카오톡 채널로 문의해주시면 상담을 진행합니다. 레퍼런스 이미지, 원하시는 소재, 사이즈, 납기를 함께 보내주시면 빠른 안내가 가능합니다.', date:'2022.09.01' },
-    { id:2, title:'배송은 얼마나 걸리나요?', body:'일반 상품은 결제 후 3~5 영업일 이내 발송됩니다. 주문 제작 상품은 내용에 따라 2~8주 소요되며, 상담 시 정확한 납기를 안내드립니다.', date:'2022.09.01' },
-    { id:3, title:'해외 배송이 가능한가요?', body:'현재는 국내 배송만 가능합니다. 해외 배송은 추후 안내 예정입니다.', date:'2022.09.01' },
-  ]
-};
-
-function renderBoard(type) {
-  const list = document.getElementById(type+'List');
-  const data = boards[type];
-  if (!data.length) { list.innerHTML = '<li style="padding:20px 0;color:#bbb;font-size:11px;">게시글이 없습니다.</li>'; return; }
-  list.innerHTML = data.map((item,i) => `
-    <li class="board-item" onclick="showPost('${type}',${i})">
-      <span class="b-num">${data.length - i}</span>
-      <span class="b-title">${item.title}</span>
-      <span class="b-date">${item.date}</span>
-    </li>`).join('');
-  // 관리자 버튼 표시
-  if (isAdmin) document.getElementById(type+'AdminBtn').classList.add('show');
-}
-
-function showPost(type, idx) {
-  const item = boards[type][idx];
-  const detail = document.getElementById(type+'Detail');
-  detail.innerHTML = `<div class="bd-title">${item.title}</div><div class="bd-date">${item.date}</div><div class="bd-body">${item.body.replace(/\n/g,'<br>')}</div><button class="bd-back" onclick="this.parentElement.classList.remove('show')">← 목록</button>`;
-  detail.classList.add('show');
-  window.scrollTo(0, detail.offsetTop - 80);
-}
-
-function toggleAdminForm(type) {
-  if (!checkAdmin()) return;
-  const form = document.getElementById(type+'Form');
-  form.classList.toggle('show');
-}
-
-function submitPost(type) {
-  const title = document.getElementById(type+'TitleInput').value.trim();
-  const body = document.getElementById(type+'BodyInput').value.trim();
-  if (!title || !body) { alert('제목과 내용을 입력하세요.'); return; }
-  const today = new Date();
-  const date = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
-  boards[type].unshift({ id: Date.now(), title, body, date });
-  document.getElementById(type+'TitleInput').value = '';
-  document.getElementById(type+'BodyInput').value = '';
-  document.getElementById(type+'Form').classList.remove('show');
-  renderBoard(type);
-}
-
-// ── 히어로 슬라이더 ──
-let cur = 0; const total = 3;
-function slideMove(d) {
-  cur = (cur + d + total) % total;
-  document.getElementById('heroSlides').style.transform = `translateX(-${cur*100}%)`;
-  document.getElementById('heroCounter').textContent = `${cur+1} / ${total}`;
-}
-setInterval(() => slideMove(1), 5000);
-
-// ── 검색 ──
-function toggleSearch() {
-  const o = document.getElementById('searchOverlay');
-  o.classList.toggle('on');
-  if (o.classList.contains('on')) document.getElementById('searchInput').focus();
-}
-
-// ── 사이드 메뉴 ──
-function toggleSideMenu() {
-  document.getElementById('sideMenu').classList.toggle('on');
-  document.getElementById('sideMenuBg').classList.toggle('on');
-}
-
-// ── 장바구니 (UI only) ──
-function openCart() { alert('장바구니 기능은 호스팅 서버 연동 후 활성화됩니다.'); }
+// ── 검색/사이드 ──
+function toggleSearch(){const o=document.getElementById('searchOverlay');o.classList.toggle('on');if(o.classList.contains('on'))document.getElementById('searchInput').focus();}
+function toggleSide(){document.getElementById('sideMenu').classList.toggle('on');document.getElementById('sideBg').classList.toggle('on');}
 
 // ── 네비게이션 ──
-const allPages = ['home','props','furniture','lighting','object','craft','brand','about','orderguide','process','notice','faq','contact','terms','privacy','login'];
-
-function nav(page, contactLabel) {
-  // 모두 숨기기
-  allPages.forEach(p => {
-    const el = document.getElementById('pg-'+p);
-    if (el) { el.style.display='none'; el.classList.remove('on'); }
-  });
-  // 홈
-  if (page === 'home') {
-    document.getElementById('pg-home').style.display = 'block';
-  } else {
-    const el = document.getElementById('pg-'+page);
-    if (el) { el.style.display='block'; el.classList.add('on'); }
-  }
-  // gnb 활성화
-  const gnbLinks = document.querySelectorAll('#gnb a');
-  const cats = ['props','furniture','lighting','object','craft','brand'];
-  gnbLinks.forEach((a,i) => a.classList.toggle('on', cats[i]===page));
-  // 문의 타이틀
-  if (page==='contact' && contactLabel) {
-    document.getElementById('contactTitle').textContent = contactLabel;
-  }
-  // 게시판 렌더
-  if (page==='notice') renderBoard('notice');
-  if (page==='faq') renderBoard('faq');
+const allPages=['home','props','furniture','lighting','object','craft','brand','login','notice','faq','contact','about','orderguide','process','terms','privacy'];
+function nav(page,label){
+  allPages.forEach(p=>{const el=document.getElementById('pg-'+p);if(el){el.style.display='none';el.classList.remove('on');}});
+  const el=document.getElementById('pg-'+page);
+  if(page==='home'){el.style.display='block';}
+  else if(el){el.style.display='block';el.classList.add('on');}
+  document.querySelectorAll('#gnb a').forEach((a,i)=>a.classList.toggle('on',['props','furniture','lighting','object','craft','brand'][i]===page));
+  if(page==='contact'&&label){document.getElementById('contactTitle').textContent=label;}
+  if(page==='notice')loadBoard('notice');
+  if(page==='faq')loadBoard('faq');
+  if(['props','furniture','lighting','object','craft'].includes(page))loadProducts(page);
   window.scrollTo(0,0);
+}
+
+// ── 로그인/회원가입 ──
+function switchAuthTab(tab){
+  document.getElementById('loginForm').style.display=tab==='login'?'block':'none';
+  document.getElementById('signupForm').style.display=tab==='signup'?'block':'none';
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('on',(i===0&&tab==='login')||(i===1&&tab==='signup')));
+  document.getElementById('authMsg').style.display='none';
+}
+
+function showMsg(msg,type){const el=document.getElementById('authMsg');el.textContent=msg;el.className='auth-msg '+(type||'');el.style.display='block';}
+
+async function doLogin(){
+  const {auth,signInWithEmailAndPassword}=window._firebase;
+  const email=document.getElementById('loginEmail').value.trim();
+  const pw=document.getElementById('loginPw').value;
+  if(!email||!pw){showMsg('이메일과 비밀번호를 입력하세요.','error');return;}
+  try{
+    await signInWithEmailAndPassword(auth,email,pw);
+    showMsg('로그인 되었습니다!','success');
+    setTimeout(()=>nav('home'),1000);
+  }catch(e){
+    const msgs={'auth/user-not-found':'등록되지 않은 이메일입니다.','auth/wrong-password':'비밀번호가 올바르지 않습니다.','auth/invalid-email':'올바른 이메일 형식이 아닙니다.','auth/invalid-credential':'이메일 또는 비밀번호를 확인하세요.'};
+    showMsg(msgs[e.code]||'로그인 실패: '+e.message,'error');
+  }
+}
+
+async function doSignup(){
+  const {auth,createUserWithEmailAndPassword}=window._firebase;
+  const name=document.getElementById('signupName').value.trim();
+  const email=document.getElementById('signupEmail').value.trim();
+  const pw=document.getElementById('signupPw').value;
+  const pw2=document.getElementById('signupPw2').value;
+  if(!name||!email||!pw){showMsg('모든 항목을 입력하세요.','error');return;}
+  if(pw!==pw2){showMsg('비밀번호가 일치하지 않습니다.','error');return;}
+  if(pw.length<6){showMsg('비밀번호는 6자리 이상이어야 합니다.','error');return;}
+  try{
+    await createUserWithEmailAndPassword(auth,email,pw);
+    showMsg('회원가입 완료! 로그인 되었습니다.','success');
+    setTimeout(()=>nav('home'),1000);
+  }catch(e){
+    const msgs={'auth/email-already-in-use':'이미 사용 중인 이메일입니다.','auth/invalid-email':'올바른 이메일 형식이 아닙니다.','auth/weak-password':'비밀번호가 너무 약합니다.'};
+    showMsg(msgs[e.code]||'회원가입 실패: '+e.message,'error');
+  }
+}
+
+function handleAuthBtn(){
+  const {auth,signOut}=window._firebase;
+  if(window._currentUser){signOut(auth).then(()=>{nav('home');alert('로그아웃 되었습니다.');});}
+  else{nav('login');}
+}
+
+// ── 상품 로드 ──
+async function loadProducts(cat){
+  const {db,collection,getDocs,query,orderBy}=window._firebase;
+  const grid=document.getElementById('grid-'+cat);
+  const isAdmin=window._currentUser&&window._currentUser.email===window._firebase.ADMIN_EMAIL;
+  try{
+    const q=query(collection(db,'products_'+cat),orderBy('createdAt','desc'));
+    const snap=await getDocs(q);
+    const count=document.getElementById('count-'+cat);
+    if(count)count.textContent=snap.size+' PRODUCTS';
+    if(snap.empty){grid.innerHTML='<div class="loading">등록된 상품이 없습니다.</div>';return;}
+    grid.innerHTML=snap.docs.map(d=>{
+      const p=d.data();
+      return `<div class="pcard">
+        <div class="pcard-img">
+          <img src="${p.image||'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80'}" alt="${p.name}">
+          <div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          ${isAdmin?`<button onclick="deleteProduct('${cat}','${d.id}')" style="position:absolute;bottom:10px;right:10px;background:#c00;color:#fff;border:none;padding:4px 10px;font-size:10px;cursor:pointer;">삭제</button>`:''}
+        </div>
+        <div class="pbrand">EIDOS STUDIO</div>
+        <div class="pname">${p.name}</div>
+        <div class="pprice">${p.salePrice?`<span class="orig">KRW ${Number(p.price).toLocaleString()}</span>KRW ${Number(p.salePrice).toLocaleString()}`:`KRW ${Number(p.price).toLocaleString()}`}</div>
+      </div>`;
+    }).join('');
+    // 관리자 버튼 표시
+    const btn=document.getElementById('addBtn-'+cat);
+    if(btn&&isAdmin)btn.style.display='block';
+  }catch(e){grid.innerHTML='<div class="loading">데이터를 불러오는 중 오류가 발생했습니다.</div>';}
+}
+
+// ── 상품 삭제 ──
+async function deleteProduct(cat,id){
+  if(!confirm('이 상품을 삭제하시겠습니까?'))return;
+  const {db,doc,deleteDoc}=window._firebase;
+  await deleteDoc(doc(db,'products_'+cat,id));
+  loadProducts(cat);
+}
+
+// ── 관리자 패널 (상품 추가) ──
+function toggleAdminPanel(cat){
+  const panel=document.getElementById('adminPanel-'+cat);
+  if(panel.classList.contains('show')){panel.classList.remove('show');return;}
+  panel.innerHTML=`
+    <h3>상품 추가 — ${cat.toUpperCase()}</h3>
+    <div class="admin-form-grid">
+      <input type="text" id="p-name-${cat}" placeholder="상품명">
+      <input type="number" id="p-price-${cat}" placeholder="정가 (숫자만)">
+      <input type="number" id="p-sale-${cat}" placeholder="할인가 (없으면 비워두세요)">
+      <input type="text" id="p-img-${cat}" placeholder="이미지 URL (또는 아래에서 업로드)">
+      <div class="img-upload-area" onclick="document.getElementById('p-file-${cat}').click()">
+        📷 사진 클릭하여 업로드
+        <input type="file" id="p-file-${cat}" accept="image/*" onchange="previewImg('${cat}')">
+        <img id="p-preview-${cat}" class="img-preview" style="display:none">
+      </div>
+    </div>
+    <div class="admin-btns">
+      <button class="btn-primary" onclick="addProduct('${cat}')">추가</button>
+      <button class="btn-secondary" onclick="document.getElementById('adminPanel-${cat}').classList.remove('show')">취소</button>
+    </div>`;
+  panel.classList.add('show');
+}
+
+async function previewImg(cat){
+  const file=document.getElementById('p-file-'+cat).files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{const img=document.getElementById('p-preview-'+cat);img.src=e.target.result;img.style.display='block';};
+  reader.readAsDataURL(file);
+}
+
+async function addProduct(cat){
+  const {db,storage,collection,addDoc,ref,uploadBytes,getDownloadURL}=window._firebase;
+  const name=document.getElementById('p-name-'+cat).value.trim();
+  const price=document.getElementById('p-price-'+cat).value.trim();
+  const sale=document.getElementById('p-sale-'+cat).value.trim();
+  const imgUrl=document.getElementById('p-img-'+cat).value.trim();
+  const file=document.getElementById('p-file-'+cat).files[0];
+  if(!name||!price){alert('상품명과 가격을 입력하세요.');return;}
+  let finalImg=imgUrl;
+  if(file){
+    try{
+      const storageRef=ref(storage,`products/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef,file);
+      finalImg=await getDownloadURL(storageRef);
+    }catch(e){alert('이미지 업로드 실패. URL을 직접 입력하거나 Firebase Storage 규칙을 확인하세요.');}
+  }
+  await addDoc(collection(db,'products_'+cat),{name,price:Number(price),salePrice:sale?Number(sale):null,image:finalImg,createdAt:new Date()});
+  document.getElementById('adminPanel-'+cat).classList.remove('show');
+  loadProducts(cat);
+  alert('상품이 추가되었습니다!');
+}
+
+// ── 게시판 ──
+async function loadBoard(type){
+  const {db,collection,getDocs,query,orderBy}=window._firebase;
+  const isAdmin=window._currentUser&&window._currentUser.email===window._firebase.ADMIN_EMAIL;
+  const writeBtn=document.querySelector(`#pg-${type} .board-write-btn`);
+  if(writeBtn)writeBtn.style.display=isAdmin?'block':'none';
+  try{
+    const q=query(collection(db,type),orderBy('createdAt','desc'));
+    const snap=await getDocs(q);
+    const list=document.getElementById(type+'List');
+    if(snap.empty){list.innerHTML='<li style="padding:20px 0;color:#bbb;font-size:11px;">게시글이 없습니다.</li>';return;}
+    list.innerHTML=snap.docs.map((d,i)=>{
+      const item=d.data();
+      const date=item.createdAt?.toDate?.()?.toLocaleDateString('ko-KR')||'';
+      return `<li class="board-item" onclick="showPost('${type}','${d.id}','${item.title.replace(/'/g,"\\'")}','${item.body.replace(/'/g,"\\'").replace(/\n/g,'\\n')}','${date}')">
+        <span class="b-num">${snap.size-i}</span>
+        <span class="b-title">${item.title}</span>
+        <span class="b-date">${date}</span>
+      </li>`;
+    }).join('');
+  }catch(e){console.error(e);}
+}
+
+function showPost(type,id,title,body,date){
+  const detail=document.getElementById(type+'Detail');
+  detail.innerHTML=`<div class="bd-title">${title}</div><div class="bd-date">${date}</div><div class="bd-body">${body.replace(/\\n/g,'<br>')}</div><button class="bd-back" onclick="this.parentElement.classList.remove('show');this.parentElement.style.display='none'">← 목록</button>`;
+  detail.classList.add('show');detail.style.display='block';
+  window.scrollTo(0,detail.offsetTop-80);
+}
+
+function toggleWriteForm(type){document.getElementById(type+'WriteForm').classList.toggle('show');}
+
+async function submitPost(type){
+  const {db,collection,addDoc}=window._firebase;
+  const title=document.getElementById(type+'TitleInput').value.trim();
+  const body=document.getElementById(type+'BodyInput').value.trim();
+  if(!title||!body){alert('내용을 입력하세요.');return;}
+  await addDoc(collection(db,type),{title,body,createdAt:new Date()});
+  document.getElementById(type+'TitleInput').value='';
+  document.getElementById(type+'BodyInput').value='';
+  document.getElementById(type+'WriteForm').classList.remove('show');
+  loadBoard(type);
+}
+
+// ── CURRENT VIEW & CURATED 로드 ──
+async function loadAllData(){
+  const {db,collection,getDocs,query,orderBy}=window._firebase;
+  // current view (notice 컬렉션 최신 3개로 포트폴리오 블로그)
+  try{
+    const cvGrid=document.getElementById('cvGrid');
+    cvGrid.innerHTML=`
+      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">ORDER MADE PROPS · MV</div><div class="cv-title">에스파 Supernova MV — 크롬 주얼 박스</div><div class="cv-desc">레진 3D 프린팅으로 조형한 뒤 크롬 도색을 입혀 완성한 보석함 소품.</div><div class="cv-date">2024. 09</div></div></div>
+      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">FURNITURE · 주문 제작</div><div class="cv-title">아치형 콘솔 테이블 — 마블 탑</div><div class="cv-desc">금속 프레임과 대리석 상판의 결합.</div><div class="cv-date">2024. 06</div></div></div>
+      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">LIGHTING · 주문 제작</div><div class="cv-title">아크 플로어 램프 — 블랙</div><div class="cv-desc">수작업 금속 가공으로 제작한 아크 형태의 플로어 램프.</div><div class="cv-date">2024. 03</div></div></div>`;
+  }catch(e){}
+  // curated - props에서 최신 4개
+  try{
+    const q=query(collection(db,'products_props'),orderBy('createdAt','desc'));
+    const snap=await getDocs(q);
+    const grid=document.getElementById('curatedGrid');
+    if(snap.empty){
+      grid.innerHTML=`
+        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Iron Frame Sofa</div><div class="pprice">KRW 3,200,000</div></div>
+        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Jewel Box — Chrome</div><div class="pprice">KRW 880,000</div></div>
+        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Arc Floor Lamp</div><div class="pprice">KRW 1,980,000</div></div>
+        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Resin Tray — Amber</div><div class="pprice">KRW 196,000</div></div>`;
+    } else {
+      grid.innerHTML=snap.docs.slice(0,4).map(d=>{const p=d.data();return`<div class="pcard"><div class="pcard-img"><img src="${p.image||'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80'}" alt="${p.name}"><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">${p.name}</div><div class="pprice">KRW ${Number(p.price).toLocaleString()}</div></div>`;}).join('');
+    }
+  }catch(e){}
 }
 
 // 초기 로드
 nav('home');
+loadAllData();
 </script>
 </body>
 </html>
