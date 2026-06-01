@@ -342,6 +342,31 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 .loading{text-align:center;padding:60px;font-size:11px;color:#aaa;letter-spacing:.15em;text-transform:uppercase;}
 .admin-only{display:none;}
 
+/* ── 장바구니 ── */
+.cart-page-wrap{max-width:900px;}
+.cart-table{width:100%;border-collapse:collapse;margin-bottom:40px;}
+.cart-table th{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#aaa;padding:0 0 14px;border-bottom:1px solid #e8e8e4;text-align:left;font-weight:400;}
+.cart-table th:last-child{text-align:right;}
+.cart-row{border-bottom:1px solid #f0f0ee;}
+.cart-row td{padding:20px 0;vertical-align:middle;}
+.cart-img{width:72px;height:72px;object-fit:cover;background:#f5f5f3;flex-shrink:0;}
+.cart-item-info{display:flex;align-items:center;gap:16px;}
+.cart-item-name{font-size:12px;color:#111;margin-bottom:4px;}
+.cart-item-brand{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#aaa;}
+.cart-qty{display:flex;align-items:center;gap:8px;}
+.cart-qty button{width:26px;height:26px;border:1px solid #ddd;background:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;transition:border-color .2s;}
+.cart-qty button:hover{border-color:#111;}
+.cart-qty span{font-size:12px;min-width:20px;text-align:center;}
+.cart-price-cell{font-size:12px;color:#111;text-align:right;}
+.cart-remove{background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:0;}
+.cart-remove:hover{color:#c00;}
+.cart-summary{background:#f5f5f3;padding:28px;margin-top:8px;}
+.cart-summary-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:12px;}
+.cart-summary-row.total{border-top:1px solid #e0e0da;padding-top:16px;margin-top:8px;font-size:14px;font-weight:500;}
+.cart-checkout-btn{background:#111;color:#fff;border:none;width:100%;padding:16px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-top:16px;}
+.cart-checkout-btn:hover{background:#333;}
+.cart-empty{padding:60px 0;text-align:center;color:#aaa;font-size:11px;letter-spacing:.15em;text-transform:uppercase;}
+
 /* ── 토스트 ── */
 .toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 24px;font-size:11px;letter-spacing:.12em;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;}
 .toast.show{opacity:1;}
@@ -365,6 +390,7 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   <div class="header-icons">
     <button onclick="toggleSearch()"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
     <button onclick="nav('wishlist')"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+    <button onclick="nav('cart')"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span class="cart-badge" id="cartCount">0</span></button>
     <button onclick="handleAuthBtn()" id="headerLoginBtn"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
     <button onclick="toggleSide()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
   </div>
@@ -392,6 +418,7 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   <ul class="side-util">
     <li><a onclick="handleAuthBtn();toggleSide()" id="sideAuthLink">로그인</a></li>
     <li><a onclick="nav('wishlist');toggleSide()">위시리스트</a></li>
+    <li><a onclick="nav('cart');toggleSide()">장바구니 (<span id="sideCartCount">0</span>)</a></li>
   </ul>
 </div>
 
@@ -472,7 +499,8 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
       <div class="detail-desc" id="detailDesc"></div>
       <div class="detail-specs" id="detailSpecs"></div>
       <div class="detail-btns">
-        <button class="btn-buy" onclick="buyNow()">구매하기</button>
+        <button class="btn-buy" onclick="addToCart()">장바구니 담기</button>
+        <button class="btn-buy" style="background:#555;" onclick="buyNow()">바로 구매하기</button>
         <button class="btn-wish" id="detailWishBtn" onclick="toggleDetailWish()">
           <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           위시리스트
@@ -638,6 +666,14 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
     <h2>개인정보의 수집 및 이용 목적</h2><ul><li>회원 관리 및 본인 확인</li><li>상품 주문·배송·결제 처리</li><li>고객 문의 응대</li></ul>
     <h2>개인정보의 보유 기간</h2><p>회원 탈퇴 시까지 보유. 전자상거래 관련 기록: 5년.</p>
     <h2>이용자의 권리</h2><p>언제든지 개인정보 조회·수정·삭제를 요청할 수 있습니다. 문의: hello@eidosstudio.co.kr</p>
+  </div>
+</div>
+
+<!-- 장바구니 -->
+<div id="pg-cart" class="sub-page">
+  <div class="sub-page-title">CART</div>
+  <div class="cart-page-wrap">
+    <div id="cartContent"></div>
   </div>
 </div>
 
@@ -957,8 +993,84 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// ── 장바구니 ──
+let cart = JSON.parse(localStorage.getItem('eidos_cart') || '[]');
+
+function updateCartBadge() {
+  const total = cart.reduce((sum, item) => sum + item.qty, 0);
+  const badge = document.getElementById('cartCount');
+  const side = document.getElementById('sideCartCount');
+  if (badge) badge.textContent = total;
+  if (side) side.textContent = total;
+}
+
+function addToCart() {
+  if (!currentDetailId) return;
+  const existing = cart.find(i => i.id === currentDetailId);
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    const name = document.getElementById('detailName').textContent;
+    const priceText = document.getElementById('detailPrice').textContent.replace(/[^0-9]/g,'');
+    const img = document.getElementById('detailMainImg').src;
+    cart.push({ id: currentDetailId, cat: currentDetailCat, name, price: Number(priceText), image: img, qty: 1 });
+  }
+  localStorage.setItem('eidos_cart', JSON.stringify(cart));
+  updateCartBadge();
+  showToast('장바구니에 담겼습니다 🛒');
+}
+
+function renderCart() {
+  const wrap = document.getElementById('cartContent');
+  if (!cart.length) { wrap.innerHTML = '<div class="cart-empty">장바구니가 비어있습니다.</div>'; return; }
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  wrap.innerHTML = `
+    <table class="cart-table">
+      <thead><tr><th>상품</th><th style="text-align:center;">수량</th><th>금액</th><th></th></tr></thead>
+      <tbody>
+        ${cart.map(item => `
+        <tr class="cart-row">
+          <td><div class="cart-item-info"><img class="cart-img" src="${item.image}" alt="${item.name}"><div><div class="cart-item-brand">EIDOS STUDIO</div><div class="cart-item-name">${item.name}</div><div style="font-size:11px;color:#888;margin-top:2px;">KRW ${item.price.toLocaleString()}</div></div></div></td>
+          <td style="text-align:center;"><div class="cart-qty" style="justify-content:center;"><button onclick="changeQty('${item.id}',-1)">−</button><span>${item.qty}</span><button onclick="changeQty('${item.id}',1)">+</button></div></td>
+          <td class="cart-price-cell">KRW ${(item.price * item.qty).toLocaleString()}</td>
+          <td style="text-align:right;"><button class="cart-remove" onclick="removeFromCart('${item.id}')">×</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="cart-summary">
+      <div class="cart-summary-row"><span>상품 합계</span><span>KRW ${subtotal.toLocaleString()}</span></div>
+      <div class="cart-summary-row"><span>배송비</span><span>별도 안내</span></div>
+      <div class="cart-summary-row total"><span>총 결제금액</span><span>KRW ${subtotal.toLocaleString()}</span></div>
+      <button class="cart-checkout-btn" onclick="checkout()">결제하기</button>
+    </div>`;
+}
+
+function changeQty(id, delta) {
+  const item = cart.find(i => i.id === id);
+  if (!item) return;
+  item.qty = Math.max(1, item.qty + delta);
+  localStorage.setItem('eidos_cart', JSON.stringify(cart));
+  updateCartBadge();
+  renderCart();
+}
+
+function removeFromCart(id) {
+  cart = cart.filter(i => i.id !== id);
+  localStorage.setItem('eidos_cart', JSON.stringify(cart));
+  updateCartBadge();
+  renderCart();
+  showToast('상품이 제거되었습니다.');
+}
+
+function checkout() {
+  alert('토스페이먼츠 결제 연동 후 활성화됩니다.\n문의하기를 통해 구매 상담을 진행해주세요.');
+}
+
+// 초기 뱃지 업데이트
+updateCartBadge();
+
 // ── 네비게이션 ──
-const allPages = ['home','props','furniture','lighting','object','craft','brand','detail','wishlist','login','notice','faq','contact','about','orderguide','process','terms','privacy'];
+const allPages = ['home','props','furniture','lighting','object','craft','brand','detail','wishlist','cart','login','notice','faq','contact','about','orderguide','process','terms','privacy'];
 
 function nav(page, label) {
   allPages.forEach(p => {
@@ -975,6 +1087,7 @@ function nav(page, label) {
   if (page==='contact' && label) document.getElementById('contactTitle').textContent = label;
   if (page==='notice') loadBoard('notice');
   if (page==='faq') loadBoard('faq');
+  if (page==='cart') renderCart();
   if (page==='wishlist') loadWishlist();
   if (['props','furniture','lighting','object','craft'].includes(page)) loadProducts(page);
   window.scrollTo(0,0);
