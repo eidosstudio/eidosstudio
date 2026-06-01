@@ -5,13 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EIDOS STUDIO</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-
-<!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBkbsNG7y2_Hkoi8TfR5BgO9lY9giNSEuM",
@@ -25,29 +22,25 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const storage = getStorage(app);
-
-  // 관리자 이메일 (본인 이메일로 변경하세요)
   const ADMIN_EMAIL = "eidosstudio01@gmail.com";
 
-  // 전역 노출
-  window._firebase = { auth, db, storage, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query, ref, uploadBytes, getDownloadURL, ADMIN_EMAIL };
+  window._firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query, setDoc, getDoc, ADMIN_EMAIL };
 
-  // 로그인 상태 감지
   onAuthStateChanged(auth, (user) => {
     window._currentUser = user;
     const isAdmin = user && user.email === ADMIN_EMAIL;
     document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
-    document.querySelectorAll('.admin-only-flex').forEach(el => el.style.display = isAdmin ? 'flex' : 'none');
     const loginBtn = document.getElementById('headerLoginBtn');
     if (loginBtn) loginBtn.textContent = user ? '로그아웃' : '로그인';
-    if (user) loadAllData();
+    const sideAuth = document.getElementById('sideAuthLink');
+    if (sideAuth) sideAuth.textContent = user ? '로그아웃' : '로그인';
+    if (user) loadWishlist();
+    loadAllData();
   });
 </script>
-
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:#fff;color:#111;font-family:'DM Sans',sans-serif;font-size:12px;letter-spacing:.02em;}
+body{background:#fff;color:#111;font-family:'DM Sans',sans-serif;font-size:12px;letter-spacing:.02em;overflow-x:hidden;}
 a{text-decoration:none;color:inherit;cursor:pointer;}
 img{display:block;width:100%;}
 button{font-family:'DM Sans',sans-serif;cursor:pointer;}
@@ -106,7 +99,7 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .h-prev{left:20px;}.h-next{right:20px;}
 .hero-counter{position:absolute;bottom:22px;left:48px;font-size:10px;letter-spacing:.15em;color:rgba(255,255,255,.7);}
 
-/* ── 섹션 공통 ── */
+/* ── 섹션 ── */
 .sec-wrap{padding:56px 0;}
 .sec-label{font-size:11px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;margin-bottom:24px;padding:0 32px;}
 
@@ -118,7 +111,6 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .ptxt{position:absolute;bottom:0;left:0;right:0;padding:20px 16px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;}
 .ptxt .pb{font-size:9px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px;}
 .ptxt .pt{font-size:14px;font-weight:400;line-height:1.2;}
-.ptxt .pd{font-size:10px;opacity:.85;margin-top:4px;}
 .promo-products{border-top:1px solid #e8e8e4;}
 .pp{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #f0f0ee;cursor:pointer;}
 .pp:hover{background:#fafaf8;}
@@ -141,15 +133,17 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .cv-desc{font-size:11px;color:#888;line-height:1.7;}
 .cv-date{font-size:10px;color:#bbb;margin-top:10px;}
 
-/* ── 상품 그리드 ── */
+/* ── 상품 카드 ── */
 .prod-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px 20px;padding:0 32px;}
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px 20px;padding:28px 32px 60px;}
 .pcard{cursor:pointer;}
 .pcard-img{aspect-ratio:1/1;background:#f5f5f3;position:relative;overflow:hidden;margin-bottom:12px;}
 .pcard-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s;}
 .pcard:hover .pcard-img img{transform:scale(1.04);}
-.wish{position:absolute;top:10px;right:10px;width:30px;height:30px;border:1px solid #ccc;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;}
-.pcard:hover .wish{opacity:1;}
-.wish svg{width:12px;height:12px;stroke:#555;fill:none;stroke-width:1.5;}
+.wish-btn{position:absolute;top:10px;right:10px;width:30px;height:30px;border:1px solid #ddd;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:2;padding:0;}
+.wish-btn svg{width:14px;height:14px;stroke:#aaa;fill:none;stroke-width:1.5;transition:all .2s;}
+.wish-btn.active svg{stroke:#e33;fill:#e33;}
+.wish-btn:hover svg{stroke:#e33;}
 .pbrand{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#888;margin-bottom:4px;}
 .pname{font-size:12px;color:#111;line-height:1.4;margin-bottom:6px;}
 .pprice{font-size:12px;color:#111;}
@@ -164,6 +158,49 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .up-tag{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#aaa;margin-bottom:6px;}
 .up-name{font-size:12px;color:#111;line-height:1.4;margin-bottom:4px;}
 .up-date{font-size:10px;color:#aaa;}
+
+/* ── 상품 상세 페이지 ── */
+.detail-page{display:none;padding:40px 32px 80px;}
+.detail-page.on{display:block;}
+.detail-back{background:none;border:none;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:#888;margin-bottom:32px;display:flex;align-items:center;gap:6px;padding:0;}
+.detail-back:hover{color:#111;}
+.detail-back svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;}
+.detail-layout{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;}
+
+/* 이미지 슬라이더 */
+.detail-imgs{position:sticky;top:80px;}
+.detail-main-img{aspect-ratio:1/1;background:#f5f5f3;overflow:hidden;margin-bottom:12px;}
+.detail-main-img img{width:100%;height:100%;object-fit:cover;}
+.detail-thumbs{display:flex;gap:8px;flex-wrap:wrap;}
+.detail-thumb{width:72px;height:72px;background:#f5f5f3;overflow:hidden;cursor:pointer;border:2px solid transparent;flex-shrink:0;}
+.detail-thumb.on{border-color:#111;}
+.detail-thumb img{width:100%;height:100%;object-fit:cover;}
+
+/* 상품 정보 */
+.detail-info{}
+.detail-brand{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#888;margin-bottom:8px;}
+.detail-name{font-size:24px;font-weight:400;line-height:1.3;color:#111;margin-bottom:16px;}
+.detail-price{font-size:20px;color:#111;margin-bottom:8px;}
+.detail-price .orig{text-decoration:line-through;color:#aaa;font-size:15px;margin-right:8px;}
+.detail-price .off{font-size:12px;color:#888;margin-left:4px;}
+.detail-divider{border:none;border-top:1px solid #e8e8e4;margin:24px 0;}
+.detail-desc{font-size:13px;color:#555;line-height:2;margin-bottom:24px;}
+.detail-specs{margin-bottom:24px;}
+.detail-spec{display:flex;gap:16px;padding:10px 0;border-bottom:1px solid #f0f0ee;}
+.detail-spec-key{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#aaa;width:80px;flex-shrink:0;}
+.detail-spec-val{font-size:12px;color:#555;}
+.detail-btns{display:flex;flex-direction:column;gap:10px;margin-top:28px;}
+.btn-buy{background:#111;color:#fff;border:none;padding:16px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;width:100%;}
+.btn-buy:hover{background:#333;}
+.btn-wish{background:#fff;color:#111;border:1px solid #ddd;padding:15px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-wish svg{width:14px;height:14px;stroke:#111;fill:none;stroke-width:1.5;transition:all .2s;}
+.btn-wish.active{border-color:#e33;color:#e33;}
+.btn-wish.active svg{stroke:#e33;fill:#e33;}
+.btn-contact{background:#fff;color:#111;border:1px solid #ddd;padding:15px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;width:100%;}
+.btn-contact:hover{border-color:#111;}
+
+/* ── 위시리스트 ── */
+.wishlist-empty{padding:60px 0;text-align:center;color:#aaa;font-size:11px;letter-spacing:.15em;text-transform:uppercase;}
 
 /* ── 카테고리 페이지 ── */
 .cat-page{display:none;}
@@ -181,29 +218,31 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .filter-btns button:first-child{border-left:none;}
 .filter-btns button:hover{color:#111;}
 .filter-btns button svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2;}
-.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px 20px;padding:28px 32px 60px;}
 .pagination{display:flex;gap:2px;padding:0 32px 60px;}
 .pagination a{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#555;border:1px solid transparent;transition:all .2s;}
 .pagination a.on{border-color:#111;color:#111;}
 
-/* ── 관리자 상품 추가 폼 ── */
-.admin-panel{background:#f5f5f3;border:1px solid #e0e0da;padding:28px 32px;margin:0 32px 28px;display:none;}
+/* ── 관리자 패널 ── */
+.admin-toggle-btn{background:#111;color:#fff;border:none;padding:8px 18px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;margin:20px 32px 0;display:none;}
+.admin-panel{background:#f5f5f3;border:1px solid #e0e0da;padding:28px 32px;margin:16px 32px;display:none;}
 .admin-panel.show{display:block;}
 .admin-panel h3{font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:20px;color:#555;}
-.admin-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
-.admin-form-grid input,.admin-form-grid select{border:1px solid #ddd;padding:10px;font-size:12px;outline:none;width:100%;}
-.admin-form-grid input:focus,.admin-form-grid select:focus{border-color:#111;}
-.img-upload-area{grid-column:1/-1;border:2px dashed #ddd;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;}
-.img-upload-area:hover{border-color:#111;}
-.img-upload-area input{display:none;}
-.img-preview{width:80px;height:80px;object-fit:cover;margin:8px auto 0;}
+.af-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.af-row input,.af-row select,.af-full{border:1px solid #ddd;padding:10px;font-size:12px;outline:none;width:100%;}
+.af-full{margin-bottom:12px;}
+.af-full textarea{width:100%;border:1px solid #ddd;padding:10px;font-size:12px;outline:none;height:100px;resize:vertical;}
+.af-full:focus,.af-row input:focus{border-color:#111;}
 .admin-btns{display:flex;gap:10px;margin-top:12px;}
 .btn-primary{background:#111;color:#fff;border:none;padding:10px 24px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;}
 .btn-secondary{background:#fff;color:#111;border:1px solid #ddd;padding:10px 24px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;}
 .btn-danger{background:#c00;color:#fff;border:none;padding:6px 14px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;}
-.admin-toggle-btn{background:#111;color:#fff;border:none;padding:8px 18px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;margin:20px 32px 0;display:none;}
+.spec-inputs{margin-bottom:12px;}
+.spec-row{display:flex;gap:8px;margin-bottom:6px;}
+.spec-row input{flex:1;border:1px solid #ddd;padding:8px;font-size:12px;outline:none;}
+.add-spec-btn{background:none;border:1px solid #ddd;padding:6px 12px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#555;}
+.extra-img-inputs input{width:100%;border:1px solid #ddd;padding:8px;font-size:12px;outline:none;margin-bottom:6px;}
 
-/* ── BRAND 페이지 ── */
+/* ── BRAND ── */
 .brand-page-hero{background:#f5f5f3;padding:80px 32px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
 .brand-page-logo{font-size:48px;font-weight:200;letter-spacing:.3em;color:#111;}
 .brand-page-logo em{font-style:normal;font-weight:500;}
@@ -259,21 +298,21 @@ header{position:sticky;top:0;z-index:300;background:#fff;border-bottom:1px solid
 .legal-content ul{padding-left:20px;margin-bottom:12px;}
 .legal-content ul li{font-size:12px;color:#555;line-height:1.9;}
 
-/* ── 회원가입/로그인 ── */
+/* ── 로그인 ── */
 .auth-wrap{max-width:400px;}
 .auth-wrap input{width:100%;border:1px solid #ddd;padding:12px;font-size:12px;margin-bottom:10px;outline:none;}
 .auth-wrap input:focus{border-color:#111;}
-.auth-wrap .btn-full{width:100%;padding:13px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;border:none;margin-bottom:10px;cursor:pointer;}
+.auth-wrap .btn-full{width:100%;padding:13px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;border:none;margin-bottom:10px;}
 .auth-wrap .btn-black{background:#111;color:#fff;}
-.auth-wrap .btn-outline{background:#fff;color:#111;border:1px solid #ddd;}
+.auth-wrap .btn-outline{background:#fff;color:#111;border:1px solid #ddd !important;}
 .auth-tabs{display:flex;margin-bottom:24px;border-bottom:1px solid #e8e8e4;}
-.auth-tab{font-size:11px;letter-spacing:.18em;text-transform:uppercase;padding:0 0 12px;margin-right:24px;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;color:#aaa;cursor:pointer;}
+.auth-tab{font-size:11px;letter-spacing:.18em;text-transform:uppercase;padding:0 0 12px;margin-right:24px;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;color:#aaa;}
 .auth-tab.on{color:#111;border-bottom-color:#111;}
 .auth-msg{font-size:11px;margin-top:12px;padding:10px;text-align:center;}
 .auth-msg.error{background:#fff0f0;color:#c00;}
 .auth-msg.success{background:#f0fff0;color:#060;}
 
-/* ── 정보 페이지 ── */
+/* ── info ── */
 .info-content{max-width:680px;}
 .info-content h2{font-size:13px;font-weight:500;letter-spacing:.15em;margin:32px 0 12px;padding-bottom:10px;border-bottom:1px solid #e8e8e4;}
 .info-content p{font-size:12px;color:#555;line-height:1.9;margin-bottom:12px;}
@@ -300,16 +339,19 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 .footer-sns a{color:#888;font-size:10px;transition:color .2s;}
 .footer-sns svg{width:16px;height:16px;stroke:#888;fill:none;stroke-width:1.5;display:block;}
 
-/* ── 로딩 ── */
 .loading{text-align:center;padding:60px;font-size:11px;color:#aaa;letter-spacing:.15em;text-transform:uppercase;}
-
 .admin-only{display:none;}
-.admin-only-flex{display:none;}
+
+/* ── 토스트 ── */
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 24px;font-size:11px;letter-spacing:.12em;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;}
+.toast.show{opacity:1;}
 </style>
 </head>
 <body>
 
-<!-- ── 헤더 ── -->
+<div class="toast" id="toast"></div>
+
+<!-- 헤더 -->
 <header>
   <span class="logo" onclick="nav('home')"><em>e</em>IDOS STUDIO</span>
   <nav class="gnb" id="gnb">
@@ -322,18 +364,17 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   </nav>
   <div class="header-icons">
     <button onclick="toggleSearch()"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
-    <button onclick="nav('cart')"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span class="cart-badge" id="cartCount">0</span></button>
+    <button onclick="nav('wishlist')"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
     <button onclick="handleAuthBtn()" id="headerLoginBtn"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
     <button onclick="toggleSide()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
   </div>
 </header>
 
-<!-- ── 사이드 메뉴 ── -->
+<!-- 사이드 메뉴 -->
 <div class="side-bg" id="sideBg" onclick="toggleSide()"></div>
 <div class="side-menu" id="sideMenu">
   <button class="side-close" onclick="toggleSide()">CLOSE</button>
-  <div class="side-sec">
-    <h4>SHOP</h4>
+  <div class="side-sec"><h4>SHOP</h4>
     <ul class="side-links">
       <li><a onclick="nav('props');toggleSide()">Order Made Props</a></li>
       <li><a onclick="nav('furniture');toggleSide()">Furniture</a></li>
@@ -345,16 +386,16 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   <hr class="side-hr">
   <ul class="side-links">
     <li><a class="bold" onclick="nav('brand');toggleSide()">BRAND</a></li>
-    <li><a class="bold" onclick="nav('story');toggleSide()">EIDOS STORY</a></li>
+    <li><a class="bold" onclick="nav('notice');toggleSide()">EIDOS STORY</a></li>
   </ul>
   <hr class="side-hr">
   <ul class="side-util">
     <li><a onclick="handleAuthBtn();toggleSide()" id="sideAuthLink">로그인</a></li>
-    <li><a onclick="nav('cart');toggleSide()">장바구니 (0)</a></li>
+    <li><a onclick="nav('wishlist');toggleSide()">위시리스트</a></li>
   </ul>
 </div>
 
-<!-- ── 검색 ── -->
+<!-- 검색 -->
 <div class="search-overlay" id="searchOverlay">
   <button class="search-close" onclick="toggleSearch()">CLOSE</button>
   <div class="search-box">
@@ -390,10 +431,14 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   <!-- CURRENT VIEW -->
   <div class="sec-wrap">
     <div class="sec-label">CURRENT VIEW</div>
-    <div class="cv-grid" id="cvGrid"><div class="loading">Loading...</div></div>
+    <div class="cv-grid" id="cvGrid">
+      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">ORDER MADE PROPS · MV</div><div class="cv-title">에스파 Supernova MV — 크롬 주얼 박스</div><div class="cv-desc">레진 3D 프린팅으로 조형한 뒤 크롬 도색을 입혀 완성한 보석함 소품.</div><div class="cv-date">2024. 09</div></div></div>
+      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">FURNITURE · 주문 제작</div><div class="cv-title">아치형 콘솔 테이블 — 마블 탑</div><div class="cv-desc">금속 프레임과 대리석 상판의 결합.</div><div class="cv-date">2024. 06</div></div></div>
+      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">LIGHTING · 주문 제작</div><div class="cv-title">아크 플로어 램프 — 블랙</div><div class="cv-desc">수작업 금속 가공으로 제작한 아크 형태의 플로어 램프.</div><div class="cv-date">2024. 03</div></div></div>
+    </div>
   </div>
 
-  <!-- CURATED BY EIDOS -->
+  <!-- CURATED -->
   <div class="sec-wrap">
     <div class="sec-label">CURATED BY EIDOS</div>
     <div class="prod-grid" id="curatedGrid"><div class="loading">Loading...</div></div>
@@ -407,6 +452,33 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
       <div class="up-item"><div class="up-img"><img src="https://images.unsplash.com/photo-1551516594-56cb78394645?w=400&q=70" alt=""></div><div class="up-tag">LIGHTING</div><div class="up-name">Geometric Pendant Series</div><div class="up-date">2026 / 07</div></div>
       <div class="up-item"><div class="up-img"><img src="https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=400&q=70" alt=""></div><div class="up-tag">OBJECT</div><div class="up-name">Cast Iron Object Set</div><div class="up-date">2026 / 08</div></div>
       <div class="up-item"><div class="up-img"><img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400&q=70" alt=""></div><div class="up-tag">CRAFT</div><div class="up-name">Oak &amp; Steel Collection</div><div class="up-date">2026 / 09</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ 상품 상세 페이지 ════ -->
+<div id="pg-detail" class="detail-page">
+  <button class="detail-back" id="detailBack"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg> 목록으로</button>
+  <div class="detail-layout">
+    <div class="detail-imgs">
+      <div class="detail-main-img"><img id="detailMainImg" src="" alt=""></div>
+      <div class="detail-thumbs" id="detailThumbs"></div>
+    </div>
+    <div class="detail-info">
+      <div class="detail-brand">EIDOS STUDIO</div>
+      <div class="detail-name" id="detailName"></div>
+      <div class="detail-price" id="detailPrice"></div>
+      <hr class="detail-divider">
+      <div class="detail-desc" id="detailDesc"></div>
+      <div class="detail-specs" id="detailSpecs"></div>
+      <div class="detail-btns">
+        <button class="btn-buy" onclick="buyNow()">구매하기</button>
+        <button class="btn-wish" id="detailWishBtn" onclick="toggleDetailWish()">
+          <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          위시리스트
+        </button>
+        <button class="btn-contact" onclick="nav('contact','구매 문의')">문의하기</button>
+      </div>
     </div>
   </div>
 </div>
@@ -472,6 +544,12 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   </div>
 </div>
 
+<!-- 위시리스트 -->
+<div id="pg-wishlist" class="sub-page">
+  <div class="sub-page-title">WISHLIST</div>
+  <div id="wishlistGrid" class="cat-grid"><div class="loading">Loading...</div></div>
+</div>
+
 <!-- 서브 페이지들 -->
 <div id="pg-login" class="sub-page">
   <div class="sub-page-title" id="authTitle">LOGIN</div>
@@ -499,11 +577,7 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 <div id="pg-notice" class="sub-page">
   <div class="sub-page-title">공지사항</div>
   <button class="board-write-btn admin-only" onclick="toggleWriteForm('notice')">+ 글 작성</button>
-  <div class="admin-write-form" id="noticeWriteForm">
-    <input type="text" id="noticeTitleInput" placeholder="제목">
-    <textarea id="noticeBodyInput" placeholder="내용"></textarea>
-    <button class="submit-btn" onclick="submitPost('notice')">등록</button>
-  </div>
+  <div class="admin-write-form" id="noticeWriteForm"><input type="text" id="noticeTitleInput" placeholder="제목"><textarea id="noticeBodyInput" placeholder="내용"></textarea><button class="submit-btn" onclick="submitPost('notice')">등록</button></div>
   <div class="board-detail" id="noticeDetail"></div>
   <ul class="board-list" id="noticeList"></ul>
 </div>
@@ -511,11 +585,7 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 <div id="pg-faq" class="sub-page">
   <div class="sub-page-title">FAQ</div>
   <button class="board-write-btn admin-only" onclick="toggleWriteForm('faq')">+ 글 작성</button>
-  <div class="admin-write-form" id="faqWriteForm">
-    <input type="text" id="faqTitleInput" placeholder="질문">
-    <textarea id="faqBodyInput" placeholder="답변"></textarea>
-    <button class="submit-btn" onclick="submitPost('faq')">등록</button>
-  </div>
+  <div class="admin-write-form" id="faqWriteForm"><input type="text" id="faqTitleInput" placeholder="질문"><textarea id="faqBodyInput" placeholder="답변"></textarea><button class="submit-btn" onclick="submitPost('faq')">등록</button></div>
   <div class="board-detail" id="faqDetail"></div>
   <ul class="board-list" id="faqList"></ul>
 </div>
@@ -531,41 +601,30 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 
 <div id="pg-about" class="sub-page">
   <div class="sub-page-title">ABOUT</div>
-  <div class="info-content">
-    <h2>스튜디오 소개</h2>
-    <p>에이도스 스튜디오(EIDOS STUDIO)는 2022년 9월 경기도 의왕에서 시작한 1인 제조 스튜디오입니다.</p>
-    <h2>철학</h2>
-    <p>모든 작업물은 그 맥락—공간이든 화면이든—을 위해 설계됩니다.</p>
-  </div>
+  <div class="info-content"><h2>스튜디오 소개</h2><p>에이도스 스튜디오(EIDOS STUDIO)는 2022년 9월 경기도 의왕에서 시작한 1인 제조 스튜디오입니다.</p><h2>철학</h2><p>모든 작업물은 그 맥락—공간이든 화면이든—을 위해 설계됩니다.</p></div>
 </div>
 
 <div id="pg-orderguide" class="sub-page">
   <div class="sub-page-title">ORDER GUIDE</div>
-  <div class="info-content">
-    <h2>주문 방법</h2><p>온라인 스토어에서 바로 구매하시거나, 주문 제작 문의를 통해 상담 후 진행합니다.</p>
-    <h2>배송 안내</h2><p>결제 완료 후 3~5 영업일 이내 발송됩니다. 주문 제작 상품은 상담 후 일정 안내드립니다.</p>
-    <h2>교환 및 환불</h2><p>수령 후 7일 이내 미개봉·미사용 상태에서 가능합니다. 주문 제작 상품은 불가합니다.</p>
-  </div>
+  <div class="info-content"><h2>주문 방법</h2><p>온라인 스토어에서 바로 구매하시거나, 주문 제작 문의를 통해 상담 후 진행합니다.</p><h2>배송 안내</h2><p>결제 완료 후 3~5 영업일 이내 발송됩니다.</p><h2>교환 및 환불</h2><p>수령 후 7일 이내 미개봉·미사용 상태에서 가능합니다. 주문 제작 상품은 불가합니다.</p></div>
 </div>
 
 <div id="pg-process" class="sub-page">
   <div class="sub-page-title">PROCESS</div>
-  <div class="info-content">
-    <div class="process-steps">
-      <div class="p-step"><div class="p-step-num">01</div><div class="p-step-body"><h4>상담 및 기획</h4><p>레퍼런스, 소재, 사이즈, 납기를 협의합니다.</p></div></div>
-      <div class="p-step"><div class="p-step-num">02</div><div class="p-step-body"><h4>3D 모델링</h4><p>Rhino·ZBrush로 정밀 모델링 후 시안을 공유합니다.</p></div></div>
-      <div class="p-step"><div class="p-step-num">03</div><div class="p-step-body"><h4>출력 및 가공</h4><p>레진 3D 프린팅 또는 금속·목공 가공으로 제작합니다.</p></div></div>
-      <div class="p-step"><div class="p-step-num">04</div><div class="p-step-body"><h4>도색 및 마감</h4><p>크롬, 무광, 특수 도색 등으로 마감합니다.</p></div></div>
-      <div class="p-step"><div class="p-step-num">05</div><div class="p-step-body"><h4>납품 및 연출</h4><p>촬영 현장 납품 또는 설치·연출까지 지원합니다.</p></div></div>
-    </div>
-  </div>
+  <div class="info-content"><div class="process-steps">
+    <div class="p-step"><div class="p-step-num">01</div><div class="p-step-body"><h4>상담 및 기획</h4><p>레퍼런스, 소재, 사이즈, 납기를 협의합니다.</p></div></div>
+    <div class="p-step"><div class="p-step-num">02</div><div class="p-step-body"><h4>3D 모델링</h4><p>Rhino·ZBrush로 정밀 모델링 후 시안을 공유합니다.</p></div></div>
+    <div class="p-step"><div class="p-step-num">03</div><div class="p-step-body"><h4>출력 및 가공</h4><p>레진 3D 프린팅 또는 금속·목공 가공으로 제작합니다.</p></div></div>
+    <div class="p-step"><div class="p-step-num">04</div><div class="p-step-body"><h4>도색 및 마감</h4><p>크롬, 무광, 특수 도색 등으로 마감합니다.</p></div></div>
+    <div class="p-step"><div class="p-step-num">05</div><div class="p-step-body"><h4>납품 및 연출</h4><p>촬영 현장 납품 또는 설치·연출까지 지원합니다.</p></div></div>
+  </div></div>
 </div>
 
 <div id="pg-terms" class="sub-page">
   <div class="sub-page-title">TERMS OF USE</div>
   <div class="legal-content">
     <h2>제1조 (목적)</h2><p>본 약관은 에이도스 스튜디오가 운영하는 웹사이트에서 제공하는 서비스의 이용 조건 및 절차, 권리·의무·책임사항을 규정함을 목적으로 합니다.</p>
-    <h2>제2조 (저작권)</h2><p>본 사이트에 게시된 모든 이미지, 텍스트, 디자인, 작업물 사진은 에이도스 스튜디오의 저작물로 보호됩니다. 무단 복제, 배포, 상업적 이용을 금지합니다.</p>
+    <h2>제2조 (저작권)</h2><p>본 사이트에 게시된 모든 이미지, 텍스트, 디자인, 작업물 사진은 에이도스 스튜디오의 저작물로 보호됩니다.</p>
     <ul><li>구매한 상품의 개인 소장 및 비영리 목적 사용은 허용됩니다.</li><li>상업적 재판매, 복제는 별도 계약이 필요합니다.</li><li>SNS 공유 시 반드시 출처(@eidos.studio)를 표기해야 합니다.</li></ul>
     <h2>제3조 (구매 이후 권리)</h2><p>상품 구매자는 소유권을 취득하나, 디자인·조형에 대한 지식재산권은 에이도스 스튜디오에 귀속됩니다.</p>
     <h2>제4조 (준거법)</h2><p>본 약관은 대한민국 법률에 따라 해석되며, 분쟁 발생 시 수원지방법원을 관할 법원으로 합니다.</p>
@@ -577,12 +636,12 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   <div class="legal-content">
     <h2>수집하는 개인정보 항목</h2><p>회원가입 시: 이메일, 비밀번호, 이름. 구매 시: 배송지 주소, 결제 정보(토스페이먼츠를 통해 처리).</p>
     <h2>개인정보의 수집 및 이용 목적</h2><ul><li>회원 관리 및 본인 확인</li><li>상품 주문·배송·결제 처리</li><li>고객 문의 응대</li></ul>
-    <h2>개인정보의 보유 기간</h2><p>회원 탈퇴 시까지 보유. 전자상거래 관련 기록: 5년, 소비자 불만 기록: 3년.</p>
+    <h2>개인정보의 보유 기간</h2><p>회원 탈퇴 시까지 보유. 전자상거래 관련 기록: 5년.</p>
     <h2>이용자의 권리</h2><p>언제든지 개인정보 조회·수정·삭제를 요청할 수 있습니다. 문의: hello@eidosstudio.co.kr</p>
   </div>
 </div>
 
-<!-- ── 푸터 ── -->
+<!-- 푸터 -->
 <footer>
   <div class="footer-main">
     <div class="f-col"><h4>Customer Care</h4><ul><li><span>hello@eidosstudio.co.kr</span></li><li><span>Weekdays 10:00–18:00</span></li><li><a onclick="nav('faq')">FAQ</a></li></ul></div>
@@ -601,135 +660,159 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 </footer>
 
 <script>
-// ── 슬라이더 ──
-let cur=0,total=3;
-function slideMove(d){cur=(cur+d+total)%total;document.getElementById('heroSlides').style.transform=`translateX(-${cur*100}%)`;document.getElementById('heroCounter').textContent=`${cur+1} / ${total}`;}
-setInterval(()=>slideMove(1),5000);
+// ── 위시리스트 (로컬스토리지) ──
+let wishlist = JSON.parse(localStorage.getItem('eidos_wishlist') || '[]');
 
-// ── 검색/사이드 ──
-function toggleSearch(){const o=document.getElementById('searchOverlay');o.classList.toggle('on');if(o.classList.contains('on'))document.getElementById('searchInput').focus();}
-function toggleSide(){document.getElementById('sideMenu').classList.toggle('on');document.getElementById('sideBg').classList.toggle('on');}
+function isWished(id) { return wishlist.includes(id); }
 
-// ── 네비게이션 ──
-const allPages=['home','props','furniture','lighting','object','craft','brand','login','notice','faq','contact','about','orderguide','process','terms','privacy'];
-function nav(page,label){
-  allPages.forEach(p=>{const el=document.getElementById('pg-'+p);if(el){el.style.display='none';el.classList.remove('on');}});
-  const el=document.getElementById('pg-'+page);
-  if(page==='home'){el.style.display='block';}
-  else if(el){el.style.display='block';el.classList.add('on');}
-  document.querySelectorAll('#gnb a').forEach((a,i)=>a.classList.toggle('on',['props','furniture','lighting','object','craft','brand'][i]===page));
-  if(page==='contact'&&label){document.getElementById('contactTitle').textContent=label;}
-  if(page==='notice')loadBoard('notice');
-  if(page==='faq')loadBoard('faq');
-  if(['props','furniture','lighting','object','craft'].includes(page))loadProducts(page);
-  window.scrollTo(0,0);
-}
-
-// ── 로그인/회원가입 ──
-function switchAuthTab(tab){
-  document.getElementById('loginForm').style.display=tab==='login'?'block':'none';
-  document.getElementById('signupForm').style.display=tab==='signup'?'block':'none';
-  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('on',(i===0&&tab==='login')||(i===1&&tab==='signup')));
-  document.getElementById('authMsg').style.display='none';
-}
-
-function showMsg(msg,type){const el=document.getElementById('authMsg');el.textContent=msg;el.className='auth-msg '+(type||'');el.style.display='block';}
-
-async function doLogin(){
-  const {auth,signInWithEmailAndPassword}=window._firebase;
-  const email=document.getElementById('loginEmail').value.trim();
-  const pw=document.getElementById('loginPw').value;
-  if(!email||!pw){showMsg('이메일과 비밀번호를 입력하세요.','error');return;}
-  try{
-    await signInWithEmailAndPassword(auth,email,pw);
-    showMsg('로그인 되었습니다!','success');
-    setTimeout(()=>nav('home'),1000);
-  }catch(e){
-    const msgs={'auth/user-not-found':'등록되지 않은 이메일입니다.','auth/wrong-password':'비밀번호가 올바르지 않습니다.','auth/invalid-email':'올바른 이메일 형식이 아닙니다.','auth/invalid-credential':'이메일 또는 비밀번호를 확인하세요.'};
-    showMsg(msgs[e.code]||'로그인 실패: '+e.message,'error');
+function toggleWish(id, name, image, price) {
+  if (wishlist.includes(id)) {
+    wishlist = wishlist.filter(w => w !== id);
+    showToast('위시리스트에서 제거되었습니다.');
+  } else {
+    wishlist.push(id);
+    showToast('위시리스트에 추가되었습니다 ♥');
   }
+  localStorage.setItem('eidos_wishlist', JSON.stringify(wishlist));
+  // 하트 버튼 업데이트
+  document.querySelectorAll(`.wish-btn[data-id="${id}"]`).forEach(btn => {
+    btn.classList.toggle('active', wishlist.includes(id));
+  });
 }
 
-async function doSignup(){
-  const {auth,createUserWithEmailAndPassword}=window._firebase;
-  const name=document.getElementById('signupName').value.trim();
-  const email=document.getElementById('signupEmail').value.trim();
-  const pw=document.getElementById('signupPw').value;
-  const pw2=document.getElementById('signupPw2').value;
-  if(!name||!email||!pw){showMsg('모든 항목을 입력하세요.','error');return;}
-  if(pw!==pw2){showMsg('비밀번호가 일치하지 않습니다.','error');return;}
-  if(pw.length<6){showMsg('비밀번호는 6자리 이상이어야 합니다.','error');return;}
-  try{
-    await createUserWithEmailAndPassword(auth,email,pw);
-    showMsg('회원가입 완료! 로그인 되었습니다.','success');
-    setTimeout(()=>nav('home'),1000);
-  }catch(e){
-    const msgs={'auth/email-already-in-use':'이미 사용 중인 이메일입니다.','auth/invalid-email':'올바른 이메일 형식이 아닙니다.','auth/weak-password':'비밀번호가 너무 약합니다.'};
-    showMsg(msgs[e.code]||'회원가입 실패: '+e.message,'error');
-  }
+function loadWishlist() {
+  const grid = document.getElementById('wishlistGrid');
+  if (!grid) return;
+  if (!wishlist.length) { grid.innerHTML = '<div class="wishlist-empty">위시리스트가 비어있습니다.</div>'; return; }
+  // wishlist 아이템들 Firebase에서 로드
+  grid.innerHTML = '<div class="loading">Loading...</div>';
+  const {db, collection, getDocs} = window._firebase;
+  const cats = ['props','furniture','lighting','object','craft'];
+  Promise.all(cats.map(c => getDocs(collection(db,'products_'+c)))).then(snaps => {
+    const items = [];
+    snaps.forEach(snap => snap.docs.forEach(d => { if (wishlist.includes(d.id)) items.push({id:d.id,...d.data()}); }));
+    if (!items.length) { grid.innerHTML = '<div class="wishlist-empty">위시리스트가 비어있습니다.</div>'; return; }
+    grid.innerHTML = items.map(p => productCard(p, true)).join('');
+  });
 }
 
-function handleAuthBtn(){
-  const {auth,signOut}=window._firebase;
-  if(window._currentUser){signOut(auth).then(()=>{nav('home');alert('로그아웃 되었습니다.');});}
-  else{nav('login');}
+// ── 상세 페이지 ──
+let currentDetailId = '';
+let currentDetailCat = '';
+
+function openDetail(cat, id, data) {
+  currentDetailId = id;
+  currentDetailCat = cat;
+  // 메인 이미지
+  const imgs = [data.image, ...(data.images || [])].filter(Boolean);
+  document.getElementById('detailMainImg').src = imgs[0] || '';
+  // 썸네일
+  const thumbs = document.getElementById('detailThumbs');
+  thumbs.innerHTML = imgs.map((img, i) => `<div class="detail-thumb ${i===0?'on':''}" onclick="switchDetailImg(this,'${img}')"><img src="${img}" alt=""></div>`).join('');
+  // 정보
+  document.getElementById('detailName').textContent = data.name;
+  const priceEl = document.getElementById('detailPrice');
+  priceEl.innerHTML = data.salePrice
+    ? `<span class="orig">KRW ${Number(data.price).toLocaleString()}</span>KRW ${Number(data.salePrice).toLocaleString()}`
+    : `KRW ${Number(data.price).toLocaleString()}`;
+  document.getElementById('detailDesc').innerHTML = (data.description || '').replace(/\n/g,'<br>');
+  // 스펙
+  const specs = data.specs || [];
+  document.getElementById('detailSpecs').innerHTML = specs.map(s => `<div class="detail-spec"><span class="detail-spec-key">${s.key}</span><span class="detail-spec-val">${s.val}</span></div>`).join('');
+  // 위시 버튼
+  const wishBtn = document.getElementById('detailWishBtn');
+  wishBtn.classList.toggle('active', isWished(id));
+  // 뒤로가기
+  document.getElementById('detailBack').onclick = () => nav(cat);
+  // 페이지 전환
+  nav('detail');
+}
+
+function switchDetailImg(thumb, src) {
+  document.getElementById('detailMainImg').src = src;
+  document.querySelectorAll('.detail-thumb').forEach(t => t.classList.remove('on'));
+  thumb.classList.add('on');
+}
+
+function toggleDetailWish() {
+  const btn = document.getElementById('detailWishBtn');
+  toggleWish(currentDetailId);
+  btn.classList.toggle('active', isWished(currentDetailId));
+}
+
+function buyNow() {
+  alert('토스페이먼츠 결제 연동 후 활성화됩니다.\n문의하기를 통해 구매 상담을 진행해주세요.');
+}
+
+// ── 상품 카드 렌더 ──
+function productCard(p, fromWish = false) {
+  const wished = isWished(p.id);
+  const cat = p.cat || currentDetailCat;
+  return `<div class="pcard" onclick="openDetail('${p.cat||''}','${p.id}',${JSON.stringify(p).replace(/"/g,'&quot;')})">
+    <div class="pcard-img">
+      <img src="${p.image||'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80'}" alt="${p.name}">
+      <button class="wish-btn ${wished?'active':''}" data-id="${p.id}" onclick="event.stopPropagation();toggleWish('${p.id}','${p.name}','${p.image}','${p.price}')">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
+      ${window._currentUser&&window._currentUser.email===window._firebase.ADMIN_EMAIL?`<button onclick="event.stopPropagation();deleteProduct('${p.cat||''}','${p.id}')" style="position:absolute;bottom:10px;right:10px;background:#c00;color:#fff;border:none;padding:4px 10px;font-size:10px;">삭제</button>`:''}
+    </div>
+    <div class="pbrand">EIDOS STUDIO</div>
+    <div class="pname">${p.name}</div>
+    <div class="pprice">${p.salePrice?`<span class="orig">KRW ${Number(p.price).toLocaleString()}</span>KRW ${Number(p.salePrice).toLocaleString()}`:`KRW ${Number(p.price).toLocaleString()}`}</div>
+  </div>`;
 }
 
 // ── 상품 로드 ──
-async function loadProducts(cat){
-  const {db,collection,getDocs,query,orderBy}=window._firebase;
-  const grid=document.getElementById('grid-'+cat);
-  const isAdmin=window._currentUser&&window._currentUser.email===window._firebase.ADMIN_EMAIL;
-  try{
-    const q=query(collection(db,'products_'+cat),orderBy('createdAt','desc'));
-    const snap=await getDocs(q);
-    const count=document.getElementById('count-'+cat);
-    if(count)count.textContent=snap.size+' PRODUCTS';
-    if(snap.empty){grid.innerHTML='<div class="loading">등록된 상품이 없습니다.</div>';return;}
-    grid.innerHTML=snap.docs.map(d=>{
-      const p=d.data();
-      return `<div class="pcard">
-        <div class="pcard-img">
-          <img src="${p.image||'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80'}" alt="${p.name}">
-          <div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-          ${isAdmin?`<button onclick="deleteProduct('${cat}','${d.id}')" style="position:absolute;bottom:10px;right:10px;background:#c00;color:#fff;border:none;padding:4px 10px;font-size:10px;cursor:pointer;">삭제</button>`:''}
-        </div>
-        <div class="pbrand">EIDOS STUDIO</div>
-        <div class="pname">${p.name}</div>
-        <div class="pprice">${p.salePrice?`<span class="orig">KRW ${Number(p.price).toLocaleString()}</span>KRW ${Number(p.salePrice).toLocaleString()}`:`KRW ${Number(p.price).toLocaleString()}`}</div>
-      </div>`;
-    }).join('');
-    // 관리자 버튼 표시
-    const btn=document.getElementById('addBtn-'+cat);
-    if(btn&&isAdmin)btn.style.display='block';
-  }catch(e){grid.innerHTML='<div class="loading">데이터를 불러오는 중 오류가 발생했습니다.</div>';}
+async function loadProducts(cat) {
+  const {db, collection, getDocs, query, orderBy} = window._firebase;
+  const grid = document.getElementById('grid-'+cat);
+  const isAdmin = window._currentUser && window._currentUser.email === window._firebase.ADMIN_EMAIL;
+  const btn = document.getElementById('addBtn-'+cat);
+  if (btn) btn.style.display = isAdmin ? 'block' : 'none';
+  try {
+    const q = query(collection(db,'products_'+cat), orderBy('createdAt','desc'));
+    const snap = await getDocs(q);
+    const count = document.getElementById('count-'+cat);
+    if (count) count.textContent = snap.size + ' PRODUCTS';
+    if (snap.empty) { grid.innerHTML = '<div class="loading">등록된 상품이 없습니다.</div>'; return; }
+    grid.innerHTML = snap.docs.map(d => productCard({id:d.id, cat, ...d.data()})).join('');
+  } catch(e) { grid.innerHTML = '<div class="loading">불러오는 중 오류가 발생했습니다.</div>'; }
 }
 
-// ── 상품 삭제 ──
-async function deleteProduct(cat,id){
-  if(!confirm('이 상품을 삭제하시겠습니까?'))return;
-  const {db,doc,deleteDoc}=window._firebase;
-  await deleteDoc(doc(db,'products_'+cat,id));
+async function deleteProduct(cat, id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  const {db, doc, deleteDoc} = window._firebase;
+  await deleteDoc(doc(db, 'products_'+cat, id));
   loadProducts(cat);
 }
 
-// ── 관리자 패널 (상품 추가) ──
-function toggleAdminPanel(cat){
-  const panel=document.getElementById('adminPanel-'+cat);
-  if(panel.classList.contains('show')){panel.classList.remove('show');return;}
-  panel.innerHTML=`
+// ── 관리자 패널 ──
+function toggleAdminPanel(cat) {
+  const panel = document.getElementById('adminPanel-'+cat);
+  if (panel.classList.contains('show')) { panel.classList.remove('show'); return; }
+  panel.innerHTML = `
     <h3>상품 추가 — ${cat.toUpperCase()}</h3>
-    <div class="admin-form-grid">
-      <input type="text" id="p-name-${cat}" placeholder="상품명">
-      <input type="number" id="p-price-${cat}" placeholder="정가 (숫자만)">
-      <input type="number" id="p-sale-${cat}" placeholder="할인가 (없으면 비워두세요)">
-      <input type="text" id="p-img-${cat}" placeholder="이미지 URL (또는 아래에서 업로드)">
-      <div class="img-upload-area" onclick="document.getElementById('p-file-${cat}').click()">
-        📷 사진 클릭하여 업로드
-        <input type="file" id="p-file-${cat}" accept="image/*" onchange="previewImg('${cat}')">
-        <img id="p-preview-${cat}" class="img-preview" style="display:none">
-      </div>
+    <div class="af-row">
+      <input type="text" id="p-name-${cat}" placeholder="상품명 *">
+      <input type="number" id="p-price-${cat}" placeholder="정가 (숫자만) *">
     </div>
+    <div class="af-row">
+      <input type="number" id="p-sale-${cat}" placeholder="할인가 (없으면 빈칸)">
+      <input type="text" id="p-img-${cat}" placeholder="대표 이미지 URL *">
+    </div>
+    <div class="af-full"><textarea id="p-desc-${cat}" placeholder="상품 설명 (줄바꿈 가능)"></textarea></div>
+    <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#888;margin-bottom:8px;">추가 이미지 URL (상세 페이지용)</div>
+    <div class="extra-img-inputs" id="extraImgs-${cat}">
+      <input type="text" placeholder="추가 이미지 URL 1">
+      <input type="text" placeholder="추가 이미지 URL 2">
+      <input type="text" placeholder="추가 이미지 URL 3">
+    </div>
+    <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#888;margin:12px 0 8px;">스펙 정보 (소재, 사이즈 등)</div>
+    <div class="spec-inputs" id="specInputs-${cat}">
+      <div class="spec-row"><input type="text" placeholder="항목 (예: 소재)"><input type="text" placeholder="내용 (예: 레진, 크롬 도색)"></div>
+      <div class="spec-row"><input type="text" placeholder="항목 (예: 사이즈)"><input type="text" placeholder="내용 (예: W200 x H300mm)"></div>
+    </div>
+    <button class="add-spec-btn" onclick="addSpecRow('${cat}')">+ 스펙 추가</button>
     <div class="admin-btns">
       <button class="btn-primary" onclick="addProduct('${cat}')">추가</button>
       <button class="btn-secondary" onclick="document.getElementById('adminPanel-${cat}').classList.remove('show')">취소</button>
@@ -737,111 +820,190 @@ function toggleAdminPanel(cat){
   panel.classList.add('show');
 }
 
-async function previewImg(cat){
-  const file=document.getElementById('p-file-'+cat).files[0];
-  if(!file)return;
-  const reader=new FileReader();
-  reader.onload=e=>{const img=document.getElementById('p-preview-'+cat);img.src=e.target.result;img.style.display='block';};
-  reader.readAsDataURL(file);
+function addSpecRow(cat) {
+  const container = document.getElementById('specInputs-'+cat);
+  const row = document.createElement('div');
+  row.className = 'spec-row';
+  row.innerHTML = '<input type="text" placeholder="항목"><input type="text" placeholder="내용">';
+  container.appendChild(row);
 }
 
-async function addProduct(cat){
-  const {db,storage,collection,addDoc,ref,uploadBytes,getDownloadURL}=window._firebase;
-  const name=document.getElementById('p-name-'+cat).value.trim();
-  const price=document.getElementById('p-price-'+cat).value.trim();
-  const sale=document.getElementById('p-sale-'+cat).value.trim();
-  const imgUrl=document.getElementById('p-img-'+cat).value.trim();
-  const file=document.getElementById('p-file-'+cat).files[0];
-  if(!name||!price){alert('상품명과 가격을 입력하세요.');return;}
-  let finalImg=imgUrl;
-  if(file){
-    try{
-      const storageRef=ref(storage,`products/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef,file);
-      finalImg=await getDownloadURL(storageRef);
-    }catch(e){alert('이미지 업로드 실패. URL을 직접 입력하거나 Firebase Storage 규칙을 확인하세요.');}
-  }
-  await addDoc(collection(db,'products_'+cat),{name,price:Number(price),salePrice:sale?Number(sale):null,image:finalImg,createdAt:new Date()});
+async function addProduct(cat) {
+  const {db, collection, addDoc} = window._firebase;
+  const name = document.getElementById('p-name-'+cat).value.trim();
+  const price = document.getElementById('p-price-'+cat).value.trim();
+  const sale = document.getElementById('p-sale-'+cat).value.trim();
+  const image = document.getElementById('p-img-'+cat).value.trim();
+  const desc = document.getElementById('p-desc-'+cat).value.trim();
+  if (!name || !price || !image) { alert('상품명, 정가, 대표 이미지 URL은 필수입니다.'); return; }
+  // 추가 이미지
+  const extraInputs = document.querySelectorAll(`#extraImgs-${cat} input`);
+  const images = Array.from(extraInputs).map(i => i.value.trim()).filter(Boolean);
+  // 스펙
+  const specRows = document.querySelectorAll(`#specInputs-${cat} .spec-row`);
+  const specs = Array.from(specRows).map(row => {
+    const inputs = row.querySelectorAll('input');
+    return { key: inputs[0].value.trim(), val: inputs[1].value.trim() };
+  }).filter(s => s.key && s.val);
+  await addDoc(collection(db, 'products_'+cat), { name, price: Number(price), salePrice: sale ? Number(sale) : null, image, images, description: desc, specs, cat, createdAt: new Date() });
   document.getElementById('adminPanel-'+cat).classList.remove('show');
   loadProducts(cat);
-  alert('상품이 추가되었습니다!');
+  showToast('상품이 추가되었습니다!');
 }
 
 // ── 게시판 ──
-async function loadBoard(type){
-  const {db,collection,getDocs,query,orderBy}=window._firebase;
-  const isAdmin=window._currentUser&&window._currentUser.email===window._firebase.ADMIN_EMAIL;
-  const writeBtn=document.querySelector(`#pg-${type} .board-write-btn`);
-  if(writeBtn)writeBtn.style.display=isAdmin?'block':'none';
-  try{
-    const q=query(collection(db,type),orderBy('createdAt','desc'));
-    const snap=await getDocs(q);
-    const list=document.getElementById(type+'List');
-    if(snap.empty){list.innerHTML='<li style="padding:20px 0;color:#bbb;font-size:11px;">게시글이 없습니다.</li>';return;}
-    list.innerHTML=snap.docs.map((d,i)=>{
-      const item=d.data();
-      const date=item.createdAt?.toDate?.()?.toLocaleDateString('ko-KR')||'';
-      return `<li class="board-item" onclick="showPost('${type}','${d.id}','${item.title.replace(/'/g,"\\'")}','${item.body.replace(/'/g,"\\'").replace(/\n/g,'\\n')}','${date}')">
-        <span class="b-num">${snap.size-i}</span>
-        <span class="b-title">${item.title}</span>
-        <span class="b-date">${date}</span>
-      </li>`;
+async function loadBoard(type) {
+  const {db, collection, getDocs, query, orderBy} = window._firebase;
+  const isAdmin = window._currentUser && window._currentUser.email === window._firebase.ADMIN_EMAIL;
+  const writeBtn = document.querySelector(`#pg-${type} .board-write-btn`);
+  if (writeBtn) writeBtn.style.display = isAdmin ? 'block' : 'none';
+  try {
+    const q = query(collection(db, type), orderBy('createdAt','desc'));
+    const snap = await getDocs(q);
+    const list = document.getElementById(type+'List');
+    if (snap.empty) { list.innerHTML = '<li style="padding:20px 0;color:#bbb;font-size:11px;">게시글이 없습니다.</li>'; return; }
+    list.innerHTML = snap.docs.map((d,i) => {
+      const item = d.data();
+      const date = item.createdAt?.toDate?.()?.toLocaleDateString('ko-KR') || '';
+      return `<li class="board-item" onclick="showPost('${type}','${d.id}',\`${item.title.replace(/`/g,"'")}\`,\`${item.body.replace(/`/g,"'")}\`,'${date}')"><span class="b-num">${snap.size-i}</span><span class="b-title">${item.title}</span><span class="b-date">${date}</span></li>`;
     }).join('');
-  }catch(e){console.error(e);}
+  } catch(e) { console.error(e); }
 }
 
-function showPost(type,id,title,body,date){
-  const detail=document.getElementById(type+'Detail');
-  detail.innerHTML=`<div class="bd-title">${title}</div><div class="bd-date">${date}</div><div class="bd-body">${body.replace(/\\n/g,'<br>')}</div><button class="bd-back" onclick="this.parentElement.classList.remove('show');this.parentElement.style.display='none'">← 목록</button>`;
-  detail.classList.add('show');detail.style.display='block';
-  window.scrollTo(0,detail.offsetTop-80);
+function showPost(type, id, title, body, date) {
+  const detail = document.getElementById(type+'Detail');
+  detail.innerHTML = `<div class="bd-title">${title}</div><div class="bd-date">${date}</div><div class="bd-body">${body.replace(/\n/g,'<br>')}</div><button class="bd-back" onclick="this.parentElement.classList.remove('show')">← 목록</button>`;
+  detail.classList.add('show');
+  window.scrollTo(0, detail.offsetTop - 80);
 }
 
-function toggleWriteForm(type){document.getElementById(type+'WriteForm').classList.toggle('show');}
+function toggleWriteForm(type) { document.getElementById(type+'WriteForm').classList.toggle('show'); }
 
-async function submitPost(type){
-  const {db,collection,addDoc}=window._firebase;
-  const title=document.getElementById(type+'TitleInput').value.trim();
-  const body=document.getElementById(type+'BodyInput').value.trim();
-  if(!title||!body){alert('내용을 입력하세요.');return;}
-  await addDoc(collection(db,type),{title,body,createdAt:new Date()});
-  document.getElementById(type+'TitleInput').value='';
-  document.getElementById(type+'BodyInput').value='';
+async function submitPost(type) {
+  const {db, collection, addDoc} = window._firebase;
+  const title = document.getElementById(type+'TitleInput').value.trim();
+  const body = document.getElementById(type+'BodyInput').value.trim();
+  if (!title || !body) { alert('내용을 입력하세요.'); return; }
+  await addDoc(collection(db, type), { title, body, createdAt: new Date() });
+  document.getElementById(type+'TitleInput').value = '';
+  document.getElementById(type+'BodyInput').value = '';
   document.getElementById(type+'WriteForm').classList.remove('show');
   loadBoard(type);
 }
 
-// ── CURRENT VIEW & CURATED 로드 ──
-async function loadAllData(){
-  const {db,collection,getDocs,query,orderBy}=window._firebase;
-  // current view (notice 컬렉션 최신 3개로 포트폴리오 블로그)
-  try{
-    const cvGrid=document.getElementById('cvGrid');
-    cvGrid.innerHTML=`
-      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">ORDER MADE PROPS · MV</div><div class="cv-title">에스파 Supernova MV — 크롬 주얼 박스</div><div class="cv-desc">레진 3D 프린팅으로 조형한 뒤 크롬 도색을 입혀 완성한 보석함 소품.</div><div class="cv-date">2024. 09</div></div></div>
-      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">FURNITURE · 주문 제작</div><div class="cv-title">아치형 콘솔 테이블 — 마블 탑</div><div class="cv-desc">금속 프레임과 대리석 상판의 결합.</div><div class="cv-date">2024. 06</div></div></div>
-      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">LIGHTING · 주문 제작</div><div class="cv-title">아크 플로어 램프 — 블랙</div><div class="cv-desc">수작업 금속 가공으로 제작한 아크 형태의 플로어 램프.</div><div class="cv-date">2024. 03</div></div></div>`;
-  }catch(e){}
-  // curated - props에서 최신 4개
-  try{
-    const q=query(collection(db,'products_props'),orderBy('createdAt','desc'));
-    const snap=await getDocs(q);
-    const grid=document.getElementById('curatedGrid');
-    if(snap.empty){
-      grid.innerHTML=`
-        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Iron Frame Sofa</div><div class="pprice">KRW 3,200,000</div></div>
-        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Jewel Box — Chrome</div><div class="pprice">KRW 880,000</div></div>
-        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Arc Floor Lamp</div><div class="pprice">KRW 1,980,000</div></div>
-        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80" alt=""><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Resin Tray — Amber</div><div class="pprice">KRW 196,000</div></div>`;
-    } else {
-      grid.innerHTML=snap.docs.slice(0,4).map(d=>{const p=d.data();return`<div class="pcard"><div class="pcard-img"><img src="${p.image||'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80'}" alt="${p.name}"><div class="wish"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">${p.name}</div><div class="pprice">KRW ${Number(p.price).toLocaleString()}</div></div>`;}).join('');
-    }
-  }catch(e){}
+// ── 로그인/회원가입 ──
+function switchAuthTab(tab) {
+  document.getElementById('loginForm').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('signupForm').style.display = tab==='signup' ? 'block' : 'none';
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('on', (i===0&&tab==='login')||(i===1&&tab==='signup')));
+  document.getElementById('authMsg').style.display = 'none';
 }
 
-// 초기 로드
+function showMsg(msg, type) { const el=document.getElementById('authMsg'); el.textContent=msg; el.className='auth-msg '+(type||''); el.style.display='block'; }
+
+async function doLogin() {
+  const {auth, signInWithEmailAndPassword} = window._firebase;
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPw').value;
+  if (!email||!pw) { showMsg('이메일과 비밀번호를 입력하세요.','error'); return; }
+  try {
+    await signInWithEmailAndPassword(auth, email, pw);
+    showMsg('로그인 되었습니다!','success');
+    setTimeout(() => nav('home'), 800);
+  } catch(e) {
+    const msgs = {'auth/user-not-found':'등록되지 않은 이메일입니다.','auth/wrong-password':'비밀번호가 올바르지 않습니다.','auth/invalid-credential':'이메일 또는 비밀번호를 확인하세요.'};
+    showMsg(msgs[e.code]||'로그인 실패: '+e.message,'error');
+  }
+}
+
+async function doSignup() {
+  const {auth, createUserWithEmailAndPassword} = window._firebase;
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const pw = document.getElementById('signupPw').value;
+  const pw2 = document.getElementById('signupPw2').value;
+  if (!name||!email||!pw) { showMsg('모든 항목을 입력하세요.','error'); return; }
+  if (pw !== pw2) { showMsg('비밀번호가 일치하지 않습니다.','error'); return; }
+  if (pw.length < 6) { showMsg('비밀번호는 6자리 이상이어야 합니다.','error'); return; }
+  try {
+    await createUserWithEmailAndPassword(auth, email, pw);
+    showMsg('회원가입 완료!','success');
+    setTimeout(() => nav('home'), 800);
+  } catch(e) {
+    const msgs = {'auth/email-already-in-use':'이미 사용 중인 이메일입니다.','auth/invalid-email':'올바른 이메일 형식이 아닙니다.'};
+    showMsg(msgs[e.code]||'회원가입 실패: '+e.message,'error');
+  }
+}
+
+function handleAuthBtn() {
+  const {auth, signOut} = window._firebase;
+  if (window._currentUser) { signOut(auth).then(() => { nav('home'); showToast('로그아웃 되었습니다.'); }); }
+  else { nav('login'); }
+}
+
+// ── 슬라이더 ──
+let cur=0, total=3;
+function slideMove(d) { cur=(cur+d+total)%total; document.getElementById('heroSlides').style.transform=`translateX(-${cur*100}%)`; document.getElementById('heroCounter').textContent=`${cur+1} / ${total}`; }
+setInterval(() => slideMove(1), 5000);
+
+// ── UI ──
+function toggleSearch() { const o=document.getElementById('searchOverlay'); o.classList.toggle('on'); if(o.classList.contains('on')) document.getElementById('searchInput').focus(); }
+function toggleSide() { document.getElementById('sideMenu').classList.toggle('on'); document.getElementById('sideBg').classList.toggle('on'); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── 네비게이션 ──
+const allPages = ['home','props','furniture','lighting','object','craft','brand','detail','wishlist','login','notice','faq','contact','about','orderguide','process','terms','privacy'];
+
+function nav(page, label) {
+  allPages.forEach(p => {
+    const el = document.getElementById('pg-'+p);
+    if (el) { el.style.display='none'; el.classList.remove('on'); }
+  });
+  if (page === 'home') {
+    document.getElementById('pg-home').style.display = 'block';
+  } else {
+    const el = document.getElementById('pg-'+page);
+    if (el) { el.style.display='block'; el.classList.add('on'); }
+  }
+  document.querySelectorAll('#gnb a').forEach((a,i) => a.classList.toggle('on', ['props','furniture','lighting','object','craft','brand'][i]===page));
+  if (page==='contact' && label) document.getElementById('contactTitle').textContent = label;
+  if (page==='notice') loadBoard('notice');
+  if (page==='faq') loadBoard('faq');
+  if (page==='wishlist') loadWishlist();
+  if (['props','furniture','lighting','object','craft'].includes(page)) loadProducts(page);
+  window.scrollTo(0,0);
+}
+
+// ── 초기 데이터 로드 ──
+async function loadAllData() {
+  const {db, collection, getDocs, query, orderBy} = window._firebase;
+  try {
+    const q = query(collection(db,'products_props'), orderBy('createdAt','desc'));
+    const snap = await getDocs(q);
+    const grid = document.getElementById('curatedGrid');
+    if (snap.empty) {
+      grid.innerHTML = `
+        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80" alt=""><button class="wish-btn" data-id="demo1" onclick="event.stopPropagation();toggleWish('demo1')"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Iron Frame Sofa</div><div class="pprice">KRW 3,200,000</div></div>
+        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80" alt=""><button class="wish-btn" data-id="demo2" onclick="event.stopPropagation();toggleWish('demo2')"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Jewel Box — Chrome</div><div class="pprice">KRW 880,000</div></div>
+        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""><button class="wish-btn" data-id="demo3" onclick="event.stopPropagation();toggleWish('demo3')"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Arc Floor Lamp</div><div class="pprice">KRW 1,980,000</div></div>
+        <div class="pcard"><div class="pcard-img"><img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80" alt=""><button class="wish-btn" data-id="demo4" onclick="event.stopPropagation();toggleWish('demo4')"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button></div><div class="pbrand">EIDOS STUDIO</div><div class="pname">Resin Tray — Amber</div><div class="pprice">KRW 196,000</div></div>`;
+    } else {
+      grid.innerHTML = snap.docs.slice(0,4).map(d => productCard({id:d.id, cat:'props', ...d.data()})).join('');
+    }
+    // 하트 상태 복원
+    document.querySelectorAll('.wish-btn').forEach(btn => {
+      if (isWished(btn.dataset.id)) btn.classList.add('active');
+    });
+  } catch(e) { console.error(e); }
+}
+
 nav('home');
-loadAllData();
 </script>
 </body>
 </html>
