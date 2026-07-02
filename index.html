@@ -434,35 +434,30 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 <!-- ════ 메인 홈 ════ -->
 <div id="pg-home">
   <div class="hero-slider">
-    <div class="hero-slides" id="heroSlides">
-      <div class="hero-slide"><img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1600&q=80" alt=""><div class="slide-text"><div class="s-brand">EIDOS STUDIO</div><h2>Art Furniture<br>&amp; Prop Studio</h2><p>금속·목공·3D 프린팅·도색</p></div></div>
-      <div class="hero-slide"><img src="https://images.unsplash.com/photo-1567016432779-094069958ea5?w=1600&q=80" alt=""><div class="slide-text"><div class="s-brand">ORDER MADE PROPS</div><h2>MV &amp; AD<br>Props Studio</h2><p>아이돌 MV·광고 소품 제작</p></div></div>
-      <div class="hero-slide"><img src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1600&q=80" alt=""><div class="slide-text"><div class="s-brand">FURNITURE</div><h2>Handcrafted<br>Furniture</h2><p>손으로 만드는 공간의 언어</p></div></div>
-    </div>
+    <div class="hero-slides" id="heroSlides"></div>
     <button class="hero-arr h-prev" onclick="slideMove(-1)"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
     <button class="hero-arr h-next" onclick="slideMove(1)"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
-    <div class="hero-counter" id="heroCounter">1 / 3</div>
+    <div class="hero-counter" id="heroCounter">1 / 1</div>
+    <!-- 관리자 편집 버튼 -->
+    <button class="admin-only" id="heroEditBtn" onclick="openSectionEditor('hero')" style="position:absolute;top:16px;right:16px;background:rgba(0,0,0,.6);color:#fff;border:none;padding:8px 16px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;z-index:10;">✏️ 슬라이더 편집</button>
   </div>
 
   <!-- PROMOTION -->
-  <div class="sec-wrap" style="padding-bottom:0">
-    <div class="sec-label">PROMOTION</div>
-    <div class="promo-grid">
-      <div class="promo-item"><img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80" alt=""><div class="ptxt"><div class="pb">ORDER MADE PROPS</div><div class="pt">MV &amp; AD Props</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Jewel Box Chrome</div><div class="ppp">KRW 880,000</div></div></div></div></div>
-      <div class="promo-item"><img src="https://images.unsplash.com/photo-1540574163026-643ea20ade25?w=600&q=80" alt=""><div class="ptxt"><div class="pb">FURNITURE</div><div class="pt">Handcrafted Furniture</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Raw Steel Dining Chair</div><div class="ppp">KRW 980,000</div></div></div></div></div>
-      <div class="promo-item"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""><div class="ptxt"><div class="pb">LIGHTING</div><div class="pt">Art Lighting</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Pendant Cluster Brass</div><div class="ppp">KRW 1,760,000</div></div></div></div></div>
-      <div class="promo-item"><img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80" alt=""><div class="ptxt"><div class="pb">OBJECT</div><div class="pt">Art Object</div></div><div class="promo-products"><div class="pp"><div class="pp-img"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=100&q=70" alt=""></div><div><div class="ppb">EIDOS STUDIO</div><div class="ppn">Abstract Sculpture No.3</div><div class="ppp">KRW 580,000</div></div></div></div></div>
+  <div class="sec-wrap" style="padding-bottom:0;position:relative;">
+    <div class="sec-label" style="display:flex;align-items:center;justify-content:space-between;padding-right:32px;">
+      PROMOTION
+      <button class="admin-only" onclick="openSectionEditor('promotion')" style="background:#111;color:#fff;border:none;padding:6px 14px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;">✏️ 편집</button>
     </div>
+    <div class="promo-grid" id="promoGrid"></div>
   </div>
 
   <!-- CURRENT VIEW -->
   <div class="sec-wrap">
-    <div class="sec-label">CURRENT VIEW</div>
-    <div class="cv-grid" id="cvGrid">
-      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">ORDER MADE PROPS · MV</div><div class="cv-title">에스파 Supernova MV — 크롬 주얼 박스</div><div class="cv-desc">레진 3D 프린팅으로 조형한 뒤 크롬 도색을 입혀 완성한 보석함 소품.</div><div class="cv-date">2024. 09</div></div></div>
-      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">FURNITURE · 주문 제작</div><div class="cv-title">아치형 콘솔 테이블 — 마블 탑</div><div class="cv-desc">금속 프레임과 대리석 상판의 결합.</div><div class="cv-date">2024. 06</div></div></div>
-      <div class="cv-item"><div class="cv-img"><img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80" alt=""></div><div class="cv-body"><div class="cv-tag">LIGHTING · 주문 제작</div><div class="cv-title">아크 플로어 램프 — 블랙</div><div class="cv-desc">수작업 금속 가공으로 제작한 아크 형태의 플로어 램프.</div><div class="cv-date">2024. 03</div></div></div>
+    <div class="sec-label" style="display:flex;align-items:center;justify-content:space-between;padding-right:32px;">
+      CURRENT VIEW
+      <button class="admin-only" onclick="openSectionEditor('currentview')" style="background:#111;color:#fff;border:none;padding:6px 14px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;">✏️ 편집</button>
     </div>
+    <div class="cv-grid" id="cvGrid"></div>
   </div>
 
   <!-- CURATED -->
@@ -473,13 +468,11 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 
   <!-- UPCOMING -->
   <div class="sec-wrap" style="border-top:1px solid #e8e8e4;">
-    <div class="sec-label">UPCOMING</div>
-    <div class="upcoming-grid">
-      <div class="up-item"><div class="up-img"><img src="https://images.unsplash.com/photo-1549187774-b4e9b0445b41?w=400&q=70" alt=""></div><div class="up-tag">FURNITURE</div><div class="up-name">Modular Shelving System</div><div class="up-date">2026 / 06</div></div>
-      <div class="up-item"><div class="up-img"><img src="https://images.unsplash.com/photo-1551516594-56cb78394645?w=400&q=70" alt=""></div><div class="up-tag">LIGHTING</div><div class="up-name">Geometric Pendant Series</div><div class="up-date">2026 / 07</div></div>
-      <div class="up-item"><div class="up-img"><img src="https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=400&q=70" alt=""></div><div class="up-tag">OBJECT</div><div class="up-name">Cast Iron Object Set</div><div class="up-date">2026 / 08</div></div>
-      <div class="up-item"><div class="up-img"><img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400&q=70" alt=""></div><div class="up-tag">CRAFT</div><div class="up-name">Oak &amp; Steel Collection</div><div class="up-date">2026 / 09</div></div>
+    <div class="sec-label" style="display:flex;align-items:center;justify-content:space-between;padding-right:32px;">
+      UPCOMING
+      <button class="admin-only" onclick="openSectionEditor('upcoming')" style="background:#111;color:#fff;border:none;padding:6px 14px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;">✏️ 편집</button>
     </div>
+    <div class="upcoming-grid" id="upcomingGrid"></div>
   </div>
 </div>
 
@@ -666,6 +659,20 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
     <h2>개인정보의 수집 및 이용 목적</h2><ul><li>회원 관리 및 본인 확인</li><li>상품 주문·배송·결제 처리</li><li>고객 문의 응대</li></ul>
     <h2>개인정보의 보유 기간</h2><p>회원 탈퇴 시까지 보유. 전자상거래 관련 기록: 5년.</p>
     <h2>이용자의 권리</h2><p>언제든지 개인정보 조회·수정·삭제를 요청할 수 있습니다. 문의: hello@eidosstudio.co.kr</p>
+  </div>
+</div>
+
+<!-- 섹션 편집 모달 -->
+<div id="sectionEditorBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;" onclick="closeSectionEditor()"></div>
+<div id="sectionEditorModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;z-index:700;width:700px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:32px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #e8e8e4;">
+    <h3 id="editorTitle" style="font-size:13px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;"></h3>
+    <button onclick="closeSectionEditor()" style="background:none;border:none;font-size:18px;color:#aaa;cursor:pointer;">×</button>
+  </div>
+  <div id="editorBody"></div>
+  <div style="display:flex;gap:10px;margin-top:24px;padding-top:16px;border-top:1px solid #e8e8e4;">
+    <button onclick="saveSectionData()" style="background:#111;color:#fff;border:none;padding:12px 28px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;">저장</button>
+    <button onclick="closeSectionEditor()" style="background:#fff;color:#111;border:1px solid #ddd;padding:12px 28px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;">취소</button>
   </div>
 </div>
 
@@ -977,9 +984,221 @@ function handleAuthBtn() {
   else { nav('login'); }
 }
 
+// ── 섹션 편집 (관리자) ──
+let currentEditorSection = '';
+
+// 기본 데이터
+const defaultData = {
+  hero: [
+    {image:'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1600&q=80', brand:'EIDOS STUDIO', title:'Art Furniture\n& Prop Studio', desc:'금속·목공·3D 프린팅·도색'},
+    {image:'https://images.unsplash.com/photo-1567016432779-094069958ea5?w=1600&q=80', brand:'ORDER MADE PROPS', title:'MV & AD\nProps Studio', desc:'아이돌 MV·광고 소품 제작'},
+    {image:'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1600&q=80', brand:'FURNITURE', title:'Handcrafted\nFurniture', desc:'손으로 만드는 공간의 언어'}
+  ],
+  promotion: [
+    {image:'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80', label:'ORDER MADE PROPS', title:'MV & AD Props'},
+    {image:'https://images.unsplash.com/photo-1540574163026-643ea20ade25?w=600&q=80', label:'FURNITURE', title:'Handcrafted Furniture'},
+    {image:'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80', label:'LIGHTING', title:'Art Lighting'},
+    {image:'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80', label:'OBJECT', title:'Art Object'}
+  ],
+  currentview: [
+    {image:'https://images.unsplash.com/photo-1592078615290-033ee584e267?w=600&q=80', tag:'ORDER MADE PROPS · MV', title:'에스파 Supernova MV — 크롬 주얼 박스', desc:'레진 3D 프린팅으로 조형한 뒤 크롬 도색을 입혀 완성한 보석함 소품.', date:'2024. 09'},
+    {image:'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=80', tag:'FURNITURE · 주문 제작', title:'아치형 콘솔 테이블 — 마블 탑', desc:'금속 프레임과 대리석 상판의 결합.', date:'2024. 06'},
+    {image:'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80', tag:'LIGHTING · 주문 제작', title:'아크 플로어 램프 — 블랙', desc:'수작업 금속 가공으로 제작한 아크 형태의 플로어 램프.', date:'2024. 03'}
+  ],
+  upcoming: [
+    {image:'https://images.unsplash.com/photo-1549187774-b4e9b0445b41?w=400&q=70', tag:'FURNITURE', name:'Modular Shelving System', date:'2026 / 06'},
+    {image:'https://images.unsplash.com/photo-1551516594-56cb78394645?w=400&q=70', tag:'LIGHTING', name:'Geometric Pendant Series', date:'2026 / 07'},
+    {image:'https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=400&q=70', tag:'OBJECT', name:'Cast Iron Object Set', date:'2026 / 08'},
+    {image:'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400&q=70', tag:'CRAFT', name:'Oak & Steel Collection', date:'2026 / 09'}
+  ]
+};
+
+let sectionData = JSON.parse(JSON.stringify(defaultData));
+
+async function loadSectionData() {
+  const {db, doc, getDoc} = window._firebase;
+  try {
+    const snap = await getDoc(doc(db, 'settings', 'mainpage'));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.hero) sectionData.hero = data.hero;
+      if (data.promotion) sectionData.promotion = data.promotion;
+      if (data.currentview) sectionData.currentview = data.currentview;
+      if (data.upcoming) sectionData.upcoming = data.upcoming;
+    }
+  } catch(e) { console.log('섹션 데이터 로드 실패, 기본값 사용'); }
+  renderAllSections();
+}
+
+function renderAllSections() {
+  renderHero();
+  renderPromotion();
+  renderCurrentView();
+  renderUpcoming();
+}
+
+function renderHero() {
+  const slides = document.getElementById('heroSlides');
+  const data = sectionData.hero;
+  slides.innerHTML = data.map(s => `
+    <div class="hero-slide">
+      <img src="${s.image}" alt="">
+      <div class="slide-text">
+        <div class="s-brand">${s.brand}</div>
+        <h2>${s.title.replace(/\n/g,'<br>')}</h2>
+        <p>${s.desc}</p>
+      </div>
+    </div>`).join('');
+  heroTotal = data.length;
+  heroCur = 0;
+  document.getElementById('heroCounter').textContent = `1 / ${heroTotal}`;
+}
+
+function renderPromotion() {
+  const grid = document.getElementById('promoGrid');
+  grid.innerHTML = sectionData.promotion.map(p => `
+    <div class="promo-item">
+      <img src="${p.image}" alt="">
+      <div class="ptxt"><div class="pb">${p.label}</div><div class="pt">${p.title}</div></div>
+      <div class="promo-products"></div>
+    </div>`).join('');
+}
+
+function renderCurrentView() {
+  const grid = document.getElementById('cvGrid');
+  grid.innerHTML = sectionData.currentview.map(c => `
+    <div class="cv-item">
+      <div class="cv-img"><img src="${c.image}" alt=""></div>
+      <div class="cv-body">
+        <div class="cv-tag">${c.tag}</div>
+        <div class="cv-title">${c.title}</div>
+        <div class="cv-desc">${c.desc}</div>
+        <div class="cv-date">${c.date}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderUpcoming() {
+  const grid = document.getElementById('upcomingGrid');
+  grid.innerHTML = sectionData.upcoming.map(u => `
+    <div class="up-item">
+      <div class="up-img"><img src="${u.image}" alt=""></div>
+      <div class="up-tag">${u.tag}</div>
+      <div class="up-name">${u.name}</div>
+      <div class="up-date">${u.date}</div>
+    </div>`).join('');
+}
+
+function openSectionEditor(section) {
+  currentEditorSection = section;
+  const titles = {hero:'히어로 슬라이더 편집', promotion:'PROMOTION 편집', currentview:'CURRENT VIEW 편집', upcoming:'UPCOMING 편집'};
+  document.getElementById('editorTitle').textContent = titles[section];
+  const body = document.getElementById('editorBody');
+  const data = sectionData[section];
+
+  if (section === 'hero') {
+    body.innerHTML = data.map((s,i) => `
+      <div style="border:1px solid #e8e8e4;padding:20px;margin-bottom:16px;">
+        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#aaa;margin-bottom:12px;">슬라이드 ${i+1}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input type="text" value="${s.image}" placeholder="이미지 URL" id="hero-img-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;grid-column:1/-1;">
+          <input type="text" value="${s.brand}" placeholder="브랜드명" id="hero-brand-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;">
+          <input type="text" value="${s.title}" placeholder="제목 (줄바꿈: \\n)" id="hero-title-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;">
+          <input type="text" value="${s.desc}" placeholder="설명" id="hero-desc-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;grid-column:1/-1;">
+        </div>
+      </div>`).join('');
+  } else if (section === 'promotion') {
+    body.innerHTML = data.map((p,i) => `
+      <div style="border:1px solid #e8e8e4;padding:20px;margin-bottom:16px;">
+        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#aaa;margin-bottom:12px;">프로모션 ${i+1}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input type="text" value="${p.image}" placeholder="이미지 URL" id="promo-img-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;grid-column:1/-1;">
+          <input type="text" value="${p.label}" placeholder="카테고리 라벨" id="promo-label-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;">
+          <input type="text" value="${p.title}" placeholder="제목" id="promo-title-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;">
+        </div>
+      </div>`).join('');
+  } else if (section === 'currentview') {
+    body.innerHTML = data.map((c,i) => `
+      <div style="border:1px solid #e8e8e4;padding:20px;margin-bottom:16px;">
+        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#aaa;margin-bottom:12px;">포트폴리오 ${i+1}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <input type="text" value="${c.image}" placeholder="이미지 URL" id="cv-img-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;">
+          <input type="text" value="${c.tag}" placeholder="태그 (예: ORDER MADE PROPS · MV)" id="cv-tag-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;">
+          <input type="text" value="${c.title}" placeholder="제목" id="cv-title-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;">
+          <textarea placeholder="설명" id="cv-desc-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;height:60px;resize:vertical;">${c.desc}</textarea>
+          <input type="text" value="${c.date}" placeholder="날짜 (예: 2024. 09)" id="cv-date-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;">
+        </div>
+      </div>`).join('');
+  } else if (section === 'upcoming') {
+    body.innerHTML = data.map((u,i) => `
+      <div style="border:1px solid #e8e8e4;padding:20px;margin-bottom:16px;">
+        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#aaa;margin-bottom:12px;">업커밍 ${i+1}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input type="text" value="${u.image}" placeholder="이미지 URL" id="up-img-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;grid-column:1/-1;">
+          <input type="text" value="${u.tag}" placeholder="태그 (예: FURNITURE)" id="up-tag-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;">
+          <input type="text" value="${u.name}" placeholder="이름" id="up-name-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;">
+          <input type="text" value="${u.date}" placeholder="날짜 (예: 2026 / 06)" id="up-date-${i}" style="border:1px solid #ddd;padding:8px;font-size:11px;outline:none;grid-column:1/-1;">
+        </div>
+      </div>`).join('');
+  }
+
+  document.getElementById('sectionEditorBg').style.display = 'block';
+  document.getElementById('sectionEditorModal').style.display = 'block';
+}
+
+function closeSectionEditor() {
+  document.getElementById('sectionEditorBg').style.display = 'none';
+  document.getElementById('sectionEditorModal').style.display = 'none';
+}
+
+async function saveSectionData() {
+  const {db, doc, setDoc} = window._firebase;
+  const section = currentEditorSection;
+  const data = sectionData[section];
+
+  if (section === 'hero') {
+    data.forEach((s,i) => {
+      s.image = document.getElementById(`hero-img-${i}`).value.trim();
+      s.brand = document.getElementById(`hero-brand-${i}`).value.trim();
+      s.title = document.getElementById(`hero-title-${i}`).value.trim();
+      s.desc = document.getElementById(`hero-desc-${i}`).value.trim();
+    });
+  } else if (section === 'promotion') {
+    data.forEach((p,i) => {
+      p.image = document.getElementById(`promo-img-${i}`).value.trim();
+      p.label = document.getElementById(`promo-label-${i}`).value.trim();
+      p.title = document.getElementById(`promo-title-${i}`).value.trim();
+    });
+  } else if (section === 'currentview') {
+    data.forEach((c,i) => {
+      c.image = document.getElementById(`cv-img-${i}`).value.trim();
+      c.tag = document.getElementById(`cv-tag-${i}`).value.trim();
+      c.title = document.getElementById(`cv-title-${i}`).value.trim();
+      c.desc = document.getElementById(`cv-desc-${i}`).value.trim();
+      c.date = document.getElementById(`cv-date-${i}`).value.trim();
+    });
+  } else if (section === 'upcoming') {
+    data.forEach((u,i) => {
+      u.image = document.getElementById(`up-img-${i}`).value.trim();
+      u.tag = document.getElementById(`up-tag-${i}`).value.trim();
+      u.name = document.getElementById(`up-name-${i}`).value.trim();
+      u.date = document.getElementById(`up-date-${i}`).value.trim();
+    });
+  }
+
+  try {
+    await setDoc(doc(db, 'settings', 'mainpage'), sectionData, {merge: true});
+    closeSectionEditor();
+    renderAllSections();
+    showToast('저장되었습니다!');
+  } catch(e) {
+    alert('저장 실패: ' + e.message);
+  }
+}
+
 // ── 슬라이더 ──
-let cur=0, total=3;
-function slideMove(d) { cur=(cur+d+total)%total; document.getElementById('heroSlides').style.transform=`translateX(-${cur*100}%)`; document.getElementById('heroCounter').textContent=`${cur+1} / ${total}`; }
+let heroCur=0, heroTotal=3;
+function slideMove(d) { heroCur=(heroCur+d+heroTotal)%heroTotal; document.getElementById('heroSlides').style.transform=`translateX(-${heroCur*100}%)`; document.getElementById('heroCounter').textContent=`${heroCur+1} / ${heroTotal}`; }
 setInterval(() => slideMove(1), 5000);
 
 // ── UI ──
@@ -1117,6 +1336,7 @@ async function loadAllData() {
 }
 
 nav('home');
+loadSectionData();
 </script>
 </body>
 </html>
