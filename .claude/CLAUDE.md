@@ -24,7 +24,9 @@
   - `settings/mainpage` — 메인 페이지 섹션(히어로 슬라이더, PROMOTION, CURRENT VIEW, UPCOMING) 내용
 - 상품 이미지는 외부 URL을 사용한다. Firebase Storage는 유료 플랜이 필요해서 쓰지 않는다.
 - 위시리스트·장바구니는 브라우저 localStorage(`eidos_wishlist`, `eidos_cart`)에 저장된다.
-- 카테고리를 추가하면 위시리스트 로딩 코드의 `cats` 배열 등 카테고리 목록이 하드코딩된 곳을 모두 함께 고쳐야 한다.
+- 카테고리를 추가하면 위시리스트 로딩 코드의 `cats` 배열 등 카테고리 목록이 하드코딩된 곳을 모두 함께 고쳐야 하고, `firebase/firestore.rules`의 `isPublicCollection` 목록에도 추가해 콘솔에 다시 게시해야 한다.
+- 보안 규칙(2026-10-21 게시): 공개 컬렉션(상품 5종, `settings`, `notice`, `faq`)만 누구나 읽기, 쓰기는 관리자 이메일 로그인일 때만.
+  사이트에 회원가입 기능이 있으므로 `request.auth != null`만으로 쓰기를 허용하면 안 된다. 원본: `firebase/firestore.rules`.
 
 ## 작업 규칙 (반드시 지킬 것)
 
