@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 관리자 = 이 이메일로 로그인한 계정 하나뿐 (index.html의 ADMIN_EMAIL과 같아야 한다)
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'eidosstudio01@gmail.com';
+    }
+
+    // 사이트에 보이는 공개 데이터: 상품(카테고리별), 메인 페이지 설정, 공지·FAQ 게시판
+    function isPublicCollection(col) {
+      return col in ['products_props', 'products_furniture', 'products_lighting',
+                     'products_object', 'products_craft',
+                     'settings', 'notice', 'faq'];
+    }
+
+    // 누구나 읽기, 관리자만 쓰기 (회원가입한 일반 고객은 읽기만 가능)
+    match /{col}/{docId} {
+      allow read: if isPublicCollection(col);
+      allow write: if isPublicCollection(col) && isAdmin();
+    }
+
+    // 그 밖의 모든 경로는 막는다 (규칙에 없는 경로는 기본적으로 거부)
+  }
+}
