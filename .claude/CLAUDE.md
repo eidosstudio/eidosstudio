@@ -22,6 +22,8 @@
 - Firestore 컬렉션:
   - `products_props`, `products_furniture`, `products_lighting`, `products_object`, `products_craft` — 카테고리별 상품
   - `settings/mainpage` — 메인 페이지 섹션(히어로 슬라이더, PROMOTION, CURRENT VIEW, UPCOMING) 내용
+  - `orders` — 손님 주문(2026-10-22 도입). `orderNo`, `status`(`결제대기`/`결제확인`/`발송완료`/`취소`, 한국어 그대로), `items`, `total`, `buyer`(이름·연락처·주소 등), `agreePrivacy`, `createdAt`, 관리자가 쓰는 `adminMemo`.
+    손님(비회원 포함)은 형식에 맞는 `결제대기` 주문 생성만, 읽기·수정·삭제는 관리자만. 필드를 바꾸면 `firebase/firestore.rules`의 `isValidNewOrder`도 함께 고쳐 콘솔에 게시한다.
 - 상품 이미지는 외부 URL을 사용한다. Firebase Storage는 유료 플랜이 필요해서 쓰지 않는다.
 - 위시리스트·장바구니는 브라우저 localStorage(`eidos_wishlist`, `eidos_cart`)에 저장된다.
 - 카테고리를 추가하면 위시리스트 로딩 코드의 `cats` 배열 등 카테고리 목록이 하드코딩된 곳을 모두 함께 고쳐야 하고, `firebase/firestore.rules`의 `isPublicCollection` 목록에도 추가해 콘솔에 다시 게시해야 한다.
@@ -40,5 +42,9 @@
 
 ## 진행 중·예정
 
-- 결제: 단기 PayApp, 장기 Toss Payments 연동 검토 중. 결제 키는 코드·채팅·커밋에 절대 넣지 않는다.
-- 통신판매업 신고 완료 상태. 사업자 정보 표기를 바꿀 때는 사용자에게 확인한다.
+- 결제(2026-10-22): 주문서(`pg-checkout`) → `orders`에 `결제대기` 저장 → 페이앱 JS API(`payapp-lite.js`, 판매자 아이디 `eidosstudio`)로 같은 탭에서 결제 화면 이동 → `?paid=주문번호`로 복귀.
+  서버가 없어 결제 완료 자동 확인(feedbackurl)은 없다. 관리자는 페이앱 판매자 앱에서 확인 후 '주문 관리' 화면(사이드 메뉴, 관리자만)에서 상태를 바꾼다.
+  페이앱 상품명 끝에 주문번호를 붙여 대조한다. `PayApp.setTarget()`은 체이닝이 안 되므로 따로 호출한다.
+  페이앱 연동 KEY·VALUE·결제 KEY는 비밀 값 — 코드·채팅·커밋에 절대 넣지 않는다. 장기적으로 Toss Payments(승인용 서버 필요) 검토.
+- 통신판매업 신고 완료 상태. 푸터 사업자 정보는 2026-10-22 실제 값으로 교체됨. 사업자 정보 표기를 바꿀 때는 사용자에게 확인한다.
+- 알려진 문제: 폭 390px에서 헤더 메뉴가 로고와 겹치고 사이드 메뉴가 화면 밖에 걸쳐 가로 스크롤이 생긴다(결제 작업 이전부터 있던 문제, 미해결).
