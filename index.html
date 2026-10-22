@@ -432,6 +432,66 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   .footer-bottom{flex-wrap:wrap;gap:12px;}
   .footer-links{gap:14px;flex-wrap:wrap;}
 }
+
+/* ── 휴대폰 2단계: 화면 배치 (hpix.co.kr 휴대폰 화면 기준, 768px 이하만) ── */
+@media(max-width:768px){
+  /* 메인: 슬라이더 520px, 섹션 여백 12px, PROMOTION·CURRENT VIEW는 한 장씩 옆으로 넘기기 */
+  .hero-slider{height:520px;}
+  .slide-text{left:24px;right:24px;bottom:44px;}
+  .slide-text h2{font-size:26px;}
+  .hero-counter{left:auto;right:16px;bottom:16px;}
+  .hero-arr{display:none;}                 /* 손가락으로 밀어서 넘김 */
+  .sec-wrap{padding:40px 0;}
+  .sec-label{font-size:13px;margin-bottom:16px;padding:0 12px !important;}
+  .promo-grid,.cv-grid{display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:calc(100% - 24px);gap:12px;padding:0 12px;margin:0;
+    overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;background:none;border:none;}
+  .promo-grid::-webkit-scrollbar,.cv-grid::-webkit-scrollbar{display:none;}
+  .promo-item,.cv-item{scroll-snap-align:center;}
+  .promo-item img{aspect-ratio:4/5;}
+  .cv-item{border:1px solid #e8e8e4;}
+  .cv-body{padding:16px 16px 20px;}
+  .prod-grid{grid-template-columns:repeat(2,1fr);gap:28px 8px;padding:0 12px;}
+  .upcoming-grid{grid-template-columns:repeat(2,1fr);padding:0 12px;}
+  .up-item{padding:12px;}
+  /* 카테고리: 하위 탭은 옆으로 밀기, 상품 2칸 */
+  .cat-head{padding:20px 12px 0;}
+  .sub-tabs{overflow-x:auto;white-space:nowrap;scrollbar-width:none;}
+  .sub-tabs::-webkit-scrollbar{display:none;}
+  .sub-tabs a{flex-shrink:0;margin-right:20px;}
+  .filter-row{padding:12px;}
+  .cat-grid{grid-template-columns:repeat(2,1fr);gap:28px 8px;padding:20px 12px 48px;}
+  .cat-grid>.loading,.prod-grid>.loading,.cat-grid>.wishlist-empty{grid-column:1/-1;}   /* 안내 문구가 세로로 찍히지 않게 */
+  .admin-toggle-btn{margin:16px 12px 0;}
+  .admin-panel{margin:12px;padding:20px 16px;}
+  .af-row{grid-template-columns:1fr;}
+  .pagination{padding:0 12px 48px;}
+  /* 상품 상세: 사진 위, 설명 아래 */
+  .detail-page{padding:20px 12px 60px;}
+  .detail-layout{grid-template-columns:1fr;gap:24px;}
+  .detail-imgs{position:static;}
+  .detail-name{font-size:20px;}
+  .detail-thumb{width:60px;height:60px;}
+  /* 브랜드 */
+  .brand-page-hero{grid-template-columns:1fr;gap:28px;padding:40px 12px;}
+  .brand-page-logo{font-size:30px;letter-spacing:.2em;}
+  .brand-sections{padding:40px 12px;}
+  .brand-section{margin-bottom:36px;padding-bottom:36px;}
+  .brand-skills{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .skill-box{padding:16px;}
+  /* 공지·FAQ·문의·안내 등 */
+  .sub-page{padding:28px 12px 60px;}
+  .contact-methods{grid-template-columns:1fr;}
+  .search-close{right:12px;}
+  /* 장바구니: 사진·간격을 줄여 삭제(×) 버튼까지 한 줄에 들어가게 */
+  .cart-img{width:56px;height:56px;}
+  .cart-item-info{gap:10px;}
+  .cart-item-brand{display:none;}
+  .cart-qty{gap:4px;}
+  .cart-qty button{width:24px;height:24px;}
+  .cart-price-cell{font-size:11px;white-space:nowrap;padding-left:6px !important;}
+  .cart-remove{padding-left:8px;}
+  .cart-summary{padding:20px 16px;}
+}
 </style>
 </head>
 <body>
@@ -1600,6 +1660,18 @@ async function submitOrder() {
     btn.disabled = false; btn.textContent = '주문하기';
   }
 }
+
+// 휴대폰: 메인 슬라이더를 손가락으로 밀어서 넘긴다 (휴대폰에서는 화살표를 숨김)
+(() => {
+  const hs = document.querySelector('.hero-slider'); if (!hs) return;
+  let x0 = null;
+  hs.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  hs.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (Math.abs(dx) > 40) slideMove(dx < 0 ? 1 : -1);
+  });
+})();
 
 // 휴대폰에서 푸터 제목을 누르면 해당 칸을 펼치거나 접는다 (PC에서는 항상 펼쳐져 있음)
 document.querySelector('.footer-main').addEventListener('click', e => {
