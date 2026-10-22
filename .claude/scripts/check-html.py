@@ -20,6 +20,17 @@ for path in sys.argv[1:]:
         body = m.group("body")
         if not body.strip():
             continue
+        line = html[: m.start("body")].count("\n") + 1
+        # 검색 정보(JSON-LD) 블록은 자바스크립트가 아니라 JSON이므로 JSON 형식만 검사한다
+        if "application/ld+json" in m.group("attrs"):
+            import json
+            try:
+                json.loads(body)
+                print(f"OK  {path}  script#{i} (json-ld, starts line {line})")
+            except ValueError as e:
+                failed = True
+                print(f"FAIL  {path}  script#{i} (json-ld, starts line {line})\n{e}")
+            continue
         is_module = 'type="module"' in m.group("attrs") or "type='module'" in m.group("attrs")
         suffix = ".mjs" if is_module else ".js"
         line = html[: m.start("body")].count("\n") + 1
