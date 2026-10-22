@@ -382,6 +382,26 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 .co-done .co-no{font-size:16px;color:#111;letter-spacing:.08em;margin:8px 0 16px;}
 @media(max-width:768px){.co-wrap{grid-template-columns:1fr;gap:28px;}}
 
+/* ── 주문 관리 ── */
+.ord-bar{display:flex;gap:8px;margin-bottom:12px;}
+.ord-bar select,.ord-bar button{border:1px solid #ddd;background:#fff;padding:8px 12px;font-size:11px;border-radius:0;}
+.ord-hint{font-size:11px;color:#888;line-height:1.7;margin-bottom:20px;max-width:680px;}
+.ord-card{border:1px solid #e8e8e4;padding:18px 20px;margin-bottom:12px;font-size:12px;color:#333;line-height:1.8;max-width:900px;}
+.ord-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px;}
+.ord-no{font-size:13px;letter-spacing:.06em;color:#111;}
+.ord-st{font-size:10px;letter-spacing:.1em;padding:3px 8px;border:1px solid #111;}
+.ord-st.s-결제대기{border-color:#c2410c;color:#c2410c;}
+.ord-st.s-결제확인{background:#111;color:#fff;}
+.ord-st.s-발송완료{border-color:#888;color:#888;}
+.ord-st.s-취소{border-color:#ccc;color:#aaa;text-decoration:line-through;}
+.ord-k{color:#999;display:inline-block;min-width:56px;}
+.ord-total{font-size:14px;color:#111;margin-top:6px;}
+.ord-act{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center;}
+.ord-act select,.ord-act input{border:1px solid #ddd;padding:7px 10px;font-size:11px;border-radius:0;}
+.ord-act input{flex:1;min-width:160px;}
+.ord-act button{border:1px solid #111;background:#111;color:#fff;padding:7px 12px;font-size:11px;}
+.ord-act .ord-del{background:#fff;color:#c00;border-color:#e5c0c0;margin-left:auto;}
+
 /* ── 토스트 ── */
 .toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 24px;font-size:11px;letter-spacing:.12em;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;}
 .toast.show{opacity:1;}
@@ -434,6 +454,7 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
     <li><a onclick="handleAuthBtn();toggleSide()" id="sideAuthLink">로그인</a></li>
     <li><a onclick="nav('wishlist');toggleSide()">위시리스트</a></li>
     <li><a onclick="nav('cart');toggleSide()">장바구니 (<span id="sideCartCount">0</span>)</a></li>
+    <li class="admin-only"><a onclick="nav('orders');toggleSide()">주문 관리</a></li>
   </ul>
 </div>
 
@@ -697,6 +718,17 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   <div class="cart-page-wrap">
     <div id="cartContent"></div>
   </div>
+</div>
+
+<!-- 주문 관리 (관리자) -->
+<div id="pg-orders" class="sub-page">
+  <div class="sub-page-title">ORDERS · 주문 관리</div>
+  <div class="ord-bar">
+    <select id="ordFilter" onchange="renderOrders()"><option value="">전체</option></select>
+    <button onclick="loadOrders()">새로고침</button>
+  </div>
+  <p class="ord-hint">결제 완료는 페이앱 판매자 앱에서 확인하세요. 페이앱 상품명 끝의 주문번호와 금액이 아래 주문과 같은지 맞춰 본 뒤 '결제확인'으로 바꾸면 됩니다.</p>
+  <div id="ordList"><div class="loading">Loading...</div></div>
 </div>
 
 <!-- 주문서 -->
@@ -1401,6 +1433,78 @@ function showPaidReturn() {
   return true;
 }
 
+// ── 주문 관리 (관리자만) ──
+const ORDER_STATUS = ['결제대기', '결제확인', '발송완료', '취소'];
+let adminOrders = [];
+function isAdminUser() { return !!(window._currentUser && window._firebase && window._currentUser.email === window._firebase.ADMIN_EMAIL); }
+async function loadOrders() {
+  const list = document.getElementById('ordList');
+  if (!isAdminUser()) { list.innerHTML = '<div class="cart-empty">관리자 로그인 후 볼 수 있습니다.</div>'; return; }
+  list.innerHTML = '<div class="loading">Loading...</div>';
+  const { db, collection, getDocs, query, orderBy } = window._firebase;
+  try {
+    const snap = await getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc')));
+    adminOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderOrders();
+  } catch (e) { console.error(e); list.innerHTML = '<div class="cart-empty">주문을 불러오지 못했어요: ' + escHtml(e.code || e.message) + '</div>'; }
+}
+function fmtTime(ts) {
+  if (!ts || !ts.toDate) return '';
+  const d = ts.toDate(), p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function renderOrders() {
+  // 상태별 개수는 저장할 때마다 다시 센다
+  const sel = document.getElementById('ordFilter'), f = sel.value;
+  sel.innerHTML = '<option value="">전체 (' + adminOrders.length + ')</option>' + ORDER_STATUS.map(st =>
+    `<option value="${st}">${st} (${adminOrders.filter(o => (o.status || '결제대기') === st).length})</option>`).join('');
+  sel.value = f;
+  const rows = adminOrders.filter(o => !f || (o.status || '결제대기') === f);
+  const list = document.getElementById('ordList');
+  if (!rows.length) { list.innerHTML = '<div class="cart-empty">주문이 없습니다.</div>'; return; }
+  list.innerHTML = rows.map(o => {
+    const b = o.buyer || {}, st = o.status || '결제대기';
+    const items = (o.items || []).map(i => `${escHtml(i.name)} × ${Number(i.qty) || 0} <span style="color:#999">(KRW ${(Number(i.price) * Number(i.qty) || 0).toLocaleString()})</span>`).join('<br>');
+    return `<div class="ord-card">
+      <div class="ord-head"><span class="ord-no">${escHtml(o.orderNo || o.id)}</span><span class="ord-st s-${escHtml(st)}">${escHtml(st)}</span></div>
+      <div><span class="ord-k">주문일</span>${fmtTime(o.createdAt)}</div>
+      <div><span class="ord-k">받는 분</span>${escHtml(b.name)} · ${escHtml(b.phone)}${b.email ? ' · ' + escHtml(b.email) : ''}</div>
+      <div><span class="ord-k">주소</span>${b.zip ? '(' + escHtml(b.zip) + ') ' : ''}${escHtml(b.address)} ${escHtml(b.address2 || '')}</div>
+      ${b.memo ? `<div><span class="ord-k">요청</span>${escHtml(b.memo)}</div>` : ''}
+      <div style="margin-top:6px;"><span class="ord-k">상품</span><span style="display:inline-block;vertical-align:top;">${items}</span></div>
+      <div class="ord-total">결제 금액 KRW ${(Number(o.total) || 0).toLocaleString()} <span style="font-size:11px;color:#999;">(배송비 별도)</span></div>
+      <div class="ord-act">
+        <select id="ost-${o.id}">${ORDER_STATUS.map(x => `<option ${x === st ? 'selected' : ''}>${x}</option>`).join('')}</select>
+        <input id="omemo-${o.id}" placeholder="관리자 메모 (송장번호 등)" maxlength="200" value="${escHtml(o.adminMemo || '')}">
+        <button onclick="saveOrder('${o.id}')">저장</button>
+        <button class="ord-del" onclick="deleteOrder('${o.id}')">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function saveOrder(id) {
+  if (!isAdminUser()) return;
+  const { db, doc, updateDoc } = window._firebase;
+  const status = document.getElementById('ost-' + id).value;
+  const adminMemo = document.getElementById('omemo-' + id).value.trim();
+  try {
+    await updateDoc(doc(db, 'orders', id), { status, adminMemo });
+    const o = adminOrders.find(x => x.id === id); if (o) { o.status = status; o.adminMemo = adminMemo; }
+    renderOrders(); showToast('저장되었습니다.');
+  } catch (e) { console.error(e); showToast('저장 실패: ' + (e.code || e.message)); }
+}
+async function deleteOrder(id) {
+  if (!isAdminUser()) return;
+  const o = adminOrders.find(x => x.id === id);
+  if (!confirm(`주문 ${o ? o.orderNo : id} 을(를) 삭제할까요?\n삭제하면 되돌릴 수 없습니다.`)) return;
+  const { db, doc, deleteDoc } = window._firebase;
+  try {
+    await deleteDoc(doc(db, 'orders', id));
+    adminOrders = adminOrders.filter(x => x.id !== id);
+    renderOrders(); showToast('삭제되었습니다.');
+  } catch (e) { console.error(e); showToast('삭제 실패: ' + (e.code || e.message)); }
+}
+
 function makeOrderNo() {
   const d = new Date(), p = n => String(n).padStart(2, '0');
   const r = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -1459,7 +1563,7 @@ async function submitOrder() {
 updateCartBadge();
 
 // ── 네비게이션 ──
-const allPages = ['home','props','furniture','lighting','object','craft','brand','detail','wishlist','cart','checkout','login','notice','faq','contact','about','orderguide','process','terms','privacy'];
+const allPages = ['home','props','furniture','lighting','object','craft','brand','detail','wishlist','cart','checkout','orders','login','notice','faq','contact','about','orderguide','process','terms','privacy'];
 
 function nav(page, label) {
   allPages.forEach(p => {
@@ -1477,6 +1581,7 @@ function nav(page, label) {
   if (page==='notice') loadBoard('notice');
   if (page==='faq') loadBoard('faq');
   if (page==='cart') renderCart();
+  if (page==='orders') loadOrders();
   if (page==='wishlist') loadWishlist();
   if (['props','furniture','lighting','object','craft'].includes(page)) loadProducts(page);
   window.scrollTo(0,0);
