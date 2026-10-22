@@ -738,8 +738,8 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 <div id="pg-contact" class="sub-page">
   <div class="sub-page-title" id="contactTitle">프로젝트 문의</div>
   <div class="contact-methods">
-    <a class="contact-card" href="https://www.instagram.com/direct/new/" target="_blank"><div class="cc-icon">📸</div><div class="cc-name">Instagram DM</div><div class="cc-desc">인스타그램 DM으로 문의해주시면 빠르게 답변드립니다.</div></a>
-    <a class="contact-card" href="https://pf.kakao.com/" target="_blank"><div class="cc-icon">💬</div><div class="cc-name">KakaoTalk Channel</div><div class="cc-desc">카카오톡 채널로 문의하시면 업무 시간 내 답변드립니다.</div></a>
+    <a class="contact-card" href="https://ig.me/m/eidos_team" target="_blank" rel="noopener"><div class="cc-icon">📸</div><div class="cc-name">Instagram DM</div><div class="cc-desc">@eidos_team 으로 다이렉트 메시지를 보내주시면 빠르게 답변드립니다.</div></a>
+    <a class="contact-card" onclick="copyKakaoId()"><div class="cc-icon">💬</div><div class="cc-name">KakaoTalk</div><div class="cc-desc">카카오톡 ID <b style="color:#111;">tlswpgur</b> — 누르면 ID가 복사됩니다. 카카오톡 › 친구 추가 › ID로 추가에서 붙여넣어 톡을 보내주세요.</div></a>
   </div>
   <div class="contact-note">📌 운영 시간: 평일 10:00 – 18:00<br>📌 이메일: hello@eidosstudio.co.kr</div>
 </div>
@@ -837,8 +837,8 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   <div class="footer-bottom">
     <div class="footer-links"><a onclick="nav('about')">About</a><a onclick="nav('terms')">Terms of Use</a><a onclick="nav('privacy')">Privacy Policy</a></div>
     <div class="footer-sns">
-      <a href="https://instagram.com/eidos.studio" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg></a>
-      <a href="#" style="font-size:10px;letter-spacing:.08em;">blog</a>
+      <a href="https://instagram.com/eidos_team" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg></a>
+      <a href="https://blog.naver.com/tlswpgur94" target="_blank" rel="noopener" style="font-size:10px;letter-spacing:.08em;">blog</a>
     </div>
   </div>
 </footer>
@@ -1659,6 +1659,14 @@ async function submitOrder() {
     showToast(e.message && !e.code ? e.message : '주문 저장에 실패했어요. 잠시 후 다시 시도해주세요.');
     btn.disabled = false; btn.textContent = '주문하기';
   }
+}
+
+// 카카오톡 ID 복사 (개인 ID는 웹 링크로 바로 대화창을 열 수 없어서 복사 후 안내)
+function copyKakaoId() {
+  const id = 'tlswpgur';
+  const done = () => showToast('카카오톡 ID tlswpgur 복사됨 · 카카오톡 › 친구 추가 › ID로 추가');
+  if (navigator.clipboard) navigator.clipboard.writeText(id).then(done, () => prompt('카카오톡 ID', id));
+  else prompt('카카오톡 ID', id);
 }
 
 // 휴대폰: 메인 슬라이더를 손가락으로 밀어서 넘긴다 (휴대폰에서는 화살표를 숨김)
