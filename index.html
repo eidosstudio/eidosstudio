@@ -961,10 +961,40 @@ async function loadProducts(cat) {
     const snap = await getDocs(q);
     const count = document.getElementById('count-'+cat);
     if (count) count.textContent = snap.size + ' PRODUCTS';
-    if (snap.empty) { grid.innerHTML = '<div class="loading">등록된 상품이 없습니다.</div>'; return; }
-    grid.innerHTML = snap.docs.map(d => productCard({id:d.id, cat, ...d.data()})).join('');
+    if (snap.empty) { catProducts[cat] = []; grid.innerHTML = '<div class="loading">등록된 상품이 없습니다.</div>'; return; }
+    catProducts[cat] = snap.docs.map(d => ({id:d.id, cat, ...d.data()}));
+    renderCatGrid(cat);
   } catch(e) { grid.innerHTML = '<div class="loading">불러오는 중 오류가 발생했습니다.</div>'; }
 }
+
+// ── 하위 분류 (카테고리 아래 탭) ──
+// 탭 이름과 상품의 sub 값이 같으면 그 탭에 보인다. 하위 분류가 없는 상품은 ALL에서만 보인다.
+const SUBCATS = {
+  props: ['MV Props', 'AD Props', 'Custom Order'],
+  furniture: ['Chair', 'Table', 'Storage', 'Bench & Stool'],
+  lighting: ['Floor', 'Wall', 'Table', 'Pendant'],
+  object: ['Art Object', 'Deco', 'Sculpture'],
+  craft: ['Metal Work', 'Wood Work', 'Mixed Media']
+};
+const catProducts = {}, curSub = {};
+function renderCatGrid(cat) {
+  const grid = document.getElementById('grid-' + cat);
+  const all = catProducts[cat] || [];
+  const sub = curSub[cat] || '';
+  const list = sub ? all.filter(p => p.sub === sub) : all;
+  const count = document.getElementById('count-' + cat);
+  if (count) count.textContent = list.length + ' PRODUCTS';
+  grid.innerHTML = list.length ? list.map(p => productCard(p)).join('')
+    : `<div class="loading">${sub ? '이 분류에 등록된 상품이 없습니다.' : '등록된 상품이 없습니다.'}</div>`;
+}
+document.querySelectorAll('.cat-page .sub-tabs').forEach(tabs => {
+  const cat = tabs.closest('.cat-page').id.replace('pg-', '');
+  tabs.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    tabs.querySelectorAll('a').forEach(x => x.classList.toggle('on', x === a));
+    curSub[cat] = a.textContent.trim() === 'ALL' ? '' : a.textContent.trim();
+    renderCatGrid(cat);
+  }));
+});
 
 async function deleteProduct(cat, id) {
   if (!confirm('삭제하시겠습니까?')) return;
@@ -987,6 +1017,10 @@ function toggleAdminPanel(cat) {
       <input type="number" id="p-sale-${cat}" placeholder="할인가 (없으면 빈칸)">
       <input type="text" id="p-img-${cat}" placeholder="대표 이미지 URL *">
     </div>
+    <div class="af-full" style="border:none;padding:0;"><select id="p-sub-${cat}" style="width:100%;border:1px solid #ddd;padding:10px;font-size:12px;">
+      <option value="">하위 분류 없음 (ALL에만 표시)</option>
+      ${(SUBCATS[cat] || []).map(x => `<option ${curSub[cat] === x ? 'selected' : ''}>${x}</option>`).join('')}
+    </select></div>
     <div class="af-full"><textarea id="p-desc-${cat}" placeholder="상품 설명 (줄바꿈 가능)"></textarea></div>
     <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#888;margin-bottom:8px;">추가 이미지 URL (상세 페이지용)</div>
     <div class="extra-img-inputs" id="extraImgs-${cat}">
@@ -1022,6 +1056,7 @@ async function addProduct(cat) {
   const sale = document.getElementById('p-sale-'+cat).value.trim();
   const image = document.getElementById('p-img-'+cat).value.trim();
   const desc = document.getElementById('p-desc-'+cat).value.trim();
+  const sub = document.getElementById('p-sub-'+cat).value;
   if (!name || !price || !image) { alert('상품명, 정가, 대표 이미지 URL은 필수입니다.'); return; }
   // 추가 이미지
   const extraInputs = document.querySelectorAll(`#extraImgs-${cat} input`);
@@ -1032,7 +1067,7 @@ async function addProduct(cat) {
     const inputs = row.querySelectorAll('input');
     return { key: inputs[0].value.trim(), val: inputs[1].value.trim() };
   }).filter(s => s.key && s.val);
-  await addDoc(collection(db, 'products_'+cat), { name, price: Number(price), salePrice: sale ? Number(sale) : null, image, images, description: desc, specs, cat, createdAt: new Date() });
+  await addDoc(collection(db, 'products_'+cat), { name, price: Number(price), salePrice: sale ? Number(sale) : null, image, images, description: desc, specs, cat, sub, createdAt: new Date() });
   document.getElementById('adminPanel-'+cat).classList.remove('show');
   loadProducts(cat);
   showToast('상품이 추가되었습니다!');
