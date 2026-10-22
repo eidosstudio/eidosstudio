@@ -406,6 +406,32 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 /* ── 토스트 ── */
 .toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 24px;font-size:11px;letter-spacing:.12em;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;}
 .toast.show{opacity:1;}
+
+/* ── 휴대폰 헤더·사이드 메뉴 (hpix.co.kr 휴대폰 화면 기준) ── */
+/* 카테고리 메뉴는 ≡ 사이드 메뉴에 있으므로 숨기고, 로고 왼쪽·아이콘 오른쪽 48px 높이 헤더 */
+@media(max-width:768px){
+  header{height:48px;padding:0 12px;}
+  .logo{left:12px;font-size:17px;letter-spacing:.14em;}
+  .gnb{display:none;}
+  .header-icons{right:12px;gap:16px;}
+  .header-icons svg{width:21px;height:21px;}
+  .header-icons .hdr-wish{display:none;}   /* 위시리스트는 사이드 메뉴에 있음 */
+  #headerLoginBtn{font-size:12px;white-space:nowrap;}
+  .side-menu{width:min(320px,85vw);padding:24px 24px 40px;}
+  .side-close{top:20px;right:20px;}
+  /* 푸터: 제목을 누르면 펼쳐지는 접이식 (hpix와 같은 방식) */
+  footer{padding:24px 12px 0;}
+  .footer-main{display:block;padding-bottom:16px;}
+  .f-col{border-bottom:1px solid #e0e0da;}
+  .f-col h4{margin:0;padding:16px 0;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+  .f-col h4::after{content:'';width:7px;height:7px;border-right:1px solid #111;border-bottom:1px solid #111;transform:rotate(45deg);margin:-4px 4px 0 0;transition:transform .2s;}
+  .f-col.open h4::after{transform:rotate(-135deg);margin-top:4px;}
+  .f-col ul{display:none;padding-bottom:14px;}
+  .f-col.open ul{display:block;}
+  .footer-biz{font-size:11px;}
+  .footer-bottom{flex-wrap:wrap;gap:12px;}
+  .footer-links{gap:14px;flex-wrap:wrap;}
+}
 </style>
 </head>
 <body>
@@ -425,7 +451,7 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   </nav>
   <div class="header-icons">
     <button onclick="toggleSearch()"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
-    <button onclick="nav('wishlist')"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+    <button class="hdr-wish" onclick="nav('wishlist')"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
     <button onclick="nav('cart')"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span class="cart-badge" id="cartCount">0</span></button>
     <button onclick="handleAuthBtn()" id="headerLoginBtn"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
     <button onclick="toggleSide()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
@@ -1574,6 +1600,13 @@ async function submitOrder() {
     btn.disabled = false; btn.textContent = '주문하기';
   }
 }
+
+// 휴대폰에서 푸터 제목을 누르면 해당 칸을 펼치거나 접는다 (PC에서는 항상 펼쳐져 있음)
+document.querySelector('.footer-main').addEventListener('click', e => {
+  if (innerWidth > 768) return;
+  const h = e.target.closest('.f-col h4');
+  if (h) h.parentElement.classList.toggle('open');
+});
 
 // 초기 뱃지 업데이트
 updateCartBadge();
