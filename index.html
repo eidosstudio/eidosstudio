@@ -8,7 +8,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBkbsNG7y2_Hkoi8TfR5BgO9lY9giNSEuM",
@@ -24,7 +24,7 @@
   const db = getFirestore(app);
   const ADMIN_EMAIL = "eidosstudio01@gmail.com";
 
-  window._firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query, setDoc, getDoc, ADMIN_EMAIL };
+  window._firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query, setDoc, getDoc, serverTimestamp, ADMIN_EMAIL };
 
   onAuthStateChanged(auth, (user) => {
     window._currentUser = user;
@@ -367,6 +367,21 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
 .cart-checkout-btn:hover{background:#333;}
 .cart-empty{padding:60px 0;text-align:center;color:#aaa;font-size:11px;letter-spacing:.15em;text-transform:uppercase;}
 
+/* ── 주문서 ── */
+.co-wrap{max-width:900px;display:grid;grid-template-columns:1fr 320px;gap:40px;align-items:start;}
+.co-sec{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#aaa;margin:0 0 14px;}
+.co-form label{display:block;font-size:11px;color:#555;margin:0 0 6px;}
+.co-form input,.co-form textarea{width:100%;border:1px solid #ddd;padding:12px;font-size:12px;margin-bottom:14px;outline:none;font-family:inherit;border-radius:0;}
+.co-form input:focus,.co-form textarea:focus{border-color:#111;}
+.co-form textarea{height:80px;resize:vertical;}
+.co-agree{display:flex;gap:8px;align-items:flex-start;font-size:11px;color:#555;line-height:1.7;margin:4px 0 18px;}
+.co-agree input{width:auto;margin:3px 0 0;}
+.co-item{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:10px 0;border-bottom:1px solid #e8e8e4;}
+.co-item span:first-child{color:#111;}
+.co-done{max-width:520px;font-size:12px;color:#555;line-height:1.9;}
+.co-done .co-no{font-size:16px;color:#111;letter-spacing:.08em;margin:8px 0 16px;}
+@media(max-width:768px){.co-wrap{grid-template-columns:1fr;gap:28px;}}
+
 /* ── 토스트 ── */
 .toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 24px;font-size:11px;letter-spacing:.12em;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;}
 .toast.show{opacity:1;}
@@ -684,6 +699,12 @@ footer{background:#f5f5f3;border-top:1px solid #e0e0da;padding:52px 32px 0;}
   </div>
 </div>
 
+<!-- 주문서 -->
+<div id="pg-checkout" class="sub-page">
+  <div class="sub-page-title">ORDER</div>
+  <div id="coBody"></div>
+</div>
+
 <!-- 푸터 -->
 <footer>
   <div class="footer-main">
@@ -743,8 +764,10 @@ function loadWishlist() {
 let currentDetailId = '';
 let currentDetailCat = '';
 
+let currentDetailData = null;
 function openDetail(cat, id, data) {
   currentDetailId = id;
+  currentDetailData = data;
   currentDetailCat = cat;
   // 메인 이미지
   const imgs = [data.image, ...(data.images || [])].filter(Boolean);
@@ -784,7 +807,8 @@ function toggleDetailWish() {
 }
 
 function buyNow() {
-  alert('토스페이먼츠 결제 연동 후 활성화됩니다.\n문의하기를 통해 구매 상담을 진행해주세요.');
+  if (!currentDetailId || !currentDetailData) return;
+  openCheckout([detailCartItem(1)], 'now');
 }
 
 // ── 상품 카드 렌더 ──
@@ -1229,10 +1253,8 @@ function addToCart() {
   if (existing) {
     existing.qty += 1;
   } else {
-    const name = document.getElementById('detailName').textContent;
-    const priceText = document.getElementById('detailPrice').textContent.replace(/[^0-9]/g,'');
-    const img = document.getElementById('detailMainImg').src;
-    cart.push({ id: currentDetailId, cat: currentDetailCat, name, price: Number(priceText), image: img, qty: 1 });
+    // 할인가가 있으면 할인가로 담는다 (예전에는 정가·할인가 숫자가 붙어서 잘못된 금액이 담겼다)
+    cart.push(detailCartItem(1));
   }
   localStorage.setItem('eidos_cart', JSON.stringify(cart));
   updateCartBadge();
@@ -1282,14 +1304,101 @@ function removeFromCart(id) {
 }
 
 function checkout() {
-  alert('토스페이먼츠 결제 연동 후 활성화됩니다.\n문의하기를 통해 구매 상담을 진행해주세요.');
+  if (!cart.length) return;
+  openCheckout(cart.map(i => ({...i})), 'cart');
+}
+
+// ── 주문서 ──
+// 손님이 주문 정보를 입력하면 Firestore orders에 '결제대기'로 저장한다.
+// 금액은 장바구니에 담긴 값이 아니라 저장 직전에 상품 데이터에서 다시 읽은 값으로 계산한다.
+let coItems = [], coFrom = '';
+function escHtml(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function unitPrice(d) { return Number(d.salePrice || d.price) || 0; }
+function detailCartItem(qty) {
+  const d = currentDetailData || {};
+  return { id: currentDetailId, cat: currentDetailCat, name: d.name || '', price: unitPrice(d), image: d.image || '', qty };
+}
+function openCheckout(items, from) {
+  coItems = items; coFrom = from;
+  const total = items.reduce((a, i) => a + i.price * i.qty, 0);
+  document.getElementById('coBody').innerHTML = `
+    <div class="co-wrap">
+      <div class="co-form">
+        <div class="co-sec">주문자 · 배송 정보</div>
+        <label for="coName">받는 분 이름 *</label><input id="coName" maxlength="40" autocomplete="name">
+        <label for="coPhone">연락처 *</label><input id="coPhone" maxlength="20" inputmode="tel" placeholder="010-0000-0000" autocomplete="tel">
+        <label for="coEmail">이메일</label><input id="coEmail" type="email" maxlength="100" autocomplete="email">
+        <label for="coZip">우편번호</label><input id="coZip" maxlength="10" inputmode="numeric" autocomplete="postal-code">
+        <label for="coAddr">주소 *</label><input id="coAddr" maxlength="200" autocomplete="street-address">
+        <label for="coAddr2">상세 주소</label><input id="coAddr2" maxlength="100">
+        <label for="coMemo">요청사항</label><textarea id="coMemo" maxlength="500"></textarea>
+        <label class="co-agree"><input type="checkbox" id="coAgree"><span>주문·배송을 위한 개인정보(이름, 연락처, 이메일, 주소) 수집·이용에 동의합니다. (<a onclick="nav('privacy')" style="text-decoration:underline;cursor:pointer;">개인정보처리방침</a>)</span></label>
+        <button class="cart-checkout-btn" id="coSubmit" onclick="submitOrder()">주문하기</button>
+      </div>
+      <div class="cart-summary">
+        <div class="co-sec">주문 상품</div>
+        ${items.map(i => `<div class="co-item"><span>${escHtml(i.name)} × ${i.qty}</span><span>KRW ${(i.price * i.qty).toLocaleString()}</span></div>`).join('')}
+        <div class="cart-summary-row" style="margin-top:14px;"><span>배송비</span><span>별도 안내</span></div>
+        <div class="cart-summary-row total"><span>상품 합계</span><span>KRW ${total.toLocaleString()}</span></div>
+      </div>
+    </div>`;
+  nav('checkout');
+}
+function makeOrderNo() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const r = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `E${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${r}`;
+}
+async function submitOrder() {
+  const v = id => document.getElementById(id).value.trim();
+  const name = v('coName'), phone = v('coPhone'), addr = v('coAddr');
+  if (!name || !phone || !addr) { showToast('이름, 연락처, 주소를 입력해주세요.'); return; }
+  if (phone.replace(/[^0-9]/g, '').length < 9) { showToast('연락처를 다시 확인해주세요.'); return; }
+  if (!document.getElementById('coAgree').checked) { showToast('개인정보 수집·이용에 동의해주세요.'); return; }
+  const btn = document.getElementById('coSubmit');
+  btn.disabled = true; btn.textContent = '주문 저장 중...';
+  const { db, collection, addDoc, doc, getDoc, serverTimestamp } = window._firebase;
+  try {
+    // 최신 가격으로 다시 계산 (장바구니에 오래 담겨 있던 가격은 쓰지 않는다)
+    const items = [];
+    for (const i of coItems) {
+      let price = Number(i.price) || 0, nm = i.name;
+      if (i.cat) {
+        const snap = await getDoc(doc(db, 'products_' + i.cat, i.id));
+        if (!snap.exists()) throw new Error('판매가 끝난 상품이 있어요: ' + i.name);
+        price = unitPrice(snap.data()); nm = snap.data().name || nm;
+      }
+      items.push({ id: String(i.id), cat: String(i.cat || ''), name: String(nm).slice(0, 100), price, qty: Math.max(1, Math.min(99, Number(i.qty) || 1)) });
+    }
+    const total = items.reduce((a, i) => a + i.price * i.qty, 0);
+    if (!(total > 0)) throw new Error('가격이 정해지지 않은 상품이 있어요. 문의하기로 연락주세요.');
+    const orderNo = makeOrderNo();
+    await addDoc(collection(db, 'orders'), {
+      orderNo, status: '결제대기', items, total,
+      buyer: { name, phone, email: v('coEmail'), zip: v('coZip'), address: addr, address2: v('coAddr2'), memo: v('coMemo') },
+      agreePrivacy: true, createdAt: serverTimestamp()
+    });
+    if (coFrom === 'cart') { cart = []; localStorage.setItem('eidos_cart', '[]'); updateCartBadge(); }
+    document.getElementById('coBody').innerHTML = `
+      <div class="co-done">
+        <div class="co-sec">주문이 접수되었습니다</div>
+        <div class="co-no">주문번호 ${escHtml(orderNo)}</div>
+        <p>상품 합계 KRW ${total.toLocaleString()} (배송비 별도)</p>
+        <p>결제 방법과 배송비는 입력하신 연락처로 안내드립니다.<br>문의: hello@eidosstudio.co.kr · 평일 10:00–18:00</p>
+      </div>`;
+    window.scrollTo(0, 0);
+  } catch (e) {
+    console.error(e);
+    showToast(e.message && !e.code ? e.message : '주문 저장에 실패했어요. 잠시 후 다시 시도해주세요.');
+    btn.disabled = false; btn.textContent = '주문하기';
+  }
 }
 
 // 초기 뱃지 업데이트
 updateCartBadge();
 
 // ── 네비게이션 ──
-const allPages = ['home','props','furniture','lighting','object','craft','brand','detail','wishlist','cart','login','notice','faq','contact','about','orderguide','process','terms','privacy'];
+const allPages = ['home','props','furniture','lighting','object','craft','brand','detail','wishlist','cart','checkout','login','notice','faq','contact','about','orderguide','process','terms','privacy'];
 
 function nav(page, label) {
   allPages.forEach(p => {
