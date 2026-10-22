@@ -21,6 +21,37 @@ service cloud.firestore {
       allow write: if isPublicCollection(col) && isAdmin();
     }
 
+    // 주문: 손님(비회원 포함)은 '결제대기' 주문을 새로 넣기만 할 수 있다.
+    // 주문 보기·수정·삭제는 관리자만 (손님 연락처·주소가 들어 있으므로)
+    match /orders/{orderId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if isValidNewOrder(request.resource.data);
+    }
+
+    function isShortString(v, minLen, maxLen) {
+      return v is string && v.size() >= minLen && v.size() <= maxLen;
+    }
+
+    function isValidNewOrder(d) {
+      return d.keys().hasOnly(['orderNo', 'status', 'items', 'total', 'buyer', 'agreePrivacy', 'createdAt'])
+        && d.keys().hasAll(['orderNo', 'status', 'items', 'total', 'buyer', 'agreePrivacy', 'createdAt'])
+        && d.status == '결제대기'
+        && d.agreePrivacy == true
+        && d.createdAt == request.time
+        && isShortString(d.orderNo, 6, 30)
+        && d.items is list && d.items.size() >= 1 && d.items.size() <= 30
+        && d.total is int && d.total > 0 && d.total <= 100000000
+        && d.buyer is map
+        && d.buyer.keys().hasOnly(['name', 'phone', 'email', 'zip', 'address', 'address2', 'memo'])
+        && isShortString(d.buyer.name, 1, 40)
+        && isShortString(d.buyer.phone, 9, 20)
+        && isShortString(d.buyer.address, 1, 200)
+        && (!('email' in d.buyer) || isShortString(d.buyer.email, 0, 100))
+        && (!('zip' in d.buyer) || isShortString(d.buyer.zip, 0, 10))
+        && (!('address2' in d.buyer) || isShortString(d.buyer.address2, 0, 100))
+        && (!('memo' in d.buyer) || isShortString(d.buyer.memo, 0, 500));
+    }
+
     // 그 밖의 모든 경로는 막는다 (규칙에 없는 경로는 기본적으로 거부)
   }
 }
